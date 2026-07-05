@@ -70,3 +70,27 @@
 - [ ] NED Prospectus
 - [ ] FAST Prospectus
 - [ ] IBA Prospectus
+
+
+
+PHASE 3 — HYBRID GRAPHRAG CORE
+
+Completed:
+- Graph schemas
+- LLM-based entity and relationship extraction
+- Document-level graph builder
+- Checkpoint/resume for graph extraction
+- Local graph chunk selection to reduce API calls
+- Graph retriever
+- Vector + graph HybridRetriever
+- Combined document and graph context
+- RAGService orchestration
+- Grounded answer generation
+- Unsupported-answer rejection
+- Retrieval evaluation: 2/2 passed
+
+Known issues for later evaluation:
+- Some false graph relationships may be extracted
+- Vector retrieval can return duplicate or unnecessary chunks
+- Retrieval parameters need tuning on the full prospectus
+- Reranking should be evaluated only after full-document ingestion

@@ -104,3 +104,58 @@ Rules:
             )
 
             return response.content[0].text
+        
+    def generate_structured(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+    ) -> str:
+        """
+        Runs a structured extraction task.
+
+        Used by graph extraction and other pipelines
+        that need raw JSON-like LLM output.
+        """
+
+        if self.provider in ("groq", "openai"):
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": user_prompt,
+                    },
+                ],
+                temperature=0,
+            )
+
+            return (
+                response.choices[0].message.content
+                or ""
+            )
+
+        if self.provider == "anthropic":
+
+            response = self.client.messages.create(
+                model=self.model,
+                system=system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": user_prompt,
+                    }
+                ],
+                max_tokens=4096,
+                temperature=0,
+            )
+
+            return response.content[0].text
+
+        raise RuntimeError(
+            f"Unsupported LLM provider: {self.provider}"
+        )
