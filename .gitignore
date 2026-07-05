@@ -1,0 +1,32 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+
+# Environment
+backend/.env
+
+# Node
+frontend/node_modules/
+
+# VS Code
+.vscode/
+
+# Storage
+storage/processed/
+
+# OS
+Thumbs.db
+.DS_Store
+# Experimental virtual environments
+backend/experiments/table_extraction/marker_env/
+
+# Generated table extraction outputs
+backend/experiments/table_extraction/adaptive_blocks/
+backend/experiments/table_extraction/column_test/
+backend/experiments/table_extraction/header_test/
+backend/experiments/table_extraction/marker_output/
+backend/experiments/table_extraction/vision_sections/
+
+# Generated storage data
+storage/
