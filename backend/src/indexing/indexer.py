@@ -28,6 +28,20 @@ class Indexer:
 
         print(f"Found {len(child_chunks)} child chunks.")
 
+        if not child_chunks:
+            print("No child chunks to index.")
+            return
+
+        document_id = (
+            child_chunks[0]["metadata"]["document"]
+        )
+
+        self.vector_store.create_collection()
+
+        self.vector_store.delete_document(
+            document_id=document_id,
+        )
+
         for start in range(0, len(child_chunks), self.BATCH_SIZE):
 
             batch = child_chunks[start:start + self.BATCH_SIZE]

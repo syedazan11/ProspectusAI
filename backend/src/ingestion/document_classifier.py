@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import fitz
 
@@ -7,41 +8,62 @@ from src.core.config import settings
 
 class DocumentClassifier:
     """
-    Classifies a PDF as:
+    Classifies a PDF at both document
+    and individual page level.
+
+    Document types:
     - digital
     - scanned
     - mixed
+
+    Page types:
+    - digital
+    - scanned
     """
 
-    def classify(self, pdf_path: Path) -> dict:
-        """
-        Analyze every page in the document.
-
-        Args:
-            pdf_path: Validated PDF path
-
-        Returns:
-            Dictionary containing document statistics.
-        """
+    def classify(
+        self,
+        pdf_path: Path,
+    ) -> dict[str, Any]:
 
         document = fitz.open(pdf_path)
 
-        total_pages = len(document)
         digital_pages = 0
         scanned_pages = 0
+        page_classifications = []
 
-        for page in document:
+        try:
+            for page_index, page in enumerate(
+                document,
+                start=1,
+            ):
+                text = page.get_text().strip()
+                text_length = len(text)
 
-            text = page.get_text().strip()
+                if (
+                    text_length
+                    >= settings.TEXT_THRESHOLD
+                ):
+                    page_type = "digital"
+                    digital_pages += 1
 
-            if len(text) >= settings.TEXT_THRESHOLD:
-                digital_pages += 1
-            else:
-                scanned_pages += 1
+                else:
+                    page_type = "scanned"
+                    scanned_pages += 1
 
-        document.close()
+                page_classifications.append(
+                    {
+                        "page_number": page_index,
+                        "page_type": page_type,
+                        "text_length": text_length,
+                    }
+                )
 
-        # Determine overall document type
+            total_pages = len(document)
+
+        finally:
+            document.close()
+
         if scanned_pages == 0:
             document_type = "digital"
 
@@ -56,4 +78,5 @@ class DocumentClassifier:
             "total_pages": total_pages,
             "digital_pages": digital_pages,
             "scanned_pages": scanned_pages,
+            "pages": page_classifications,
         }

@@ -1,0 +1,523 @@
+import json
+from pathlib import Path
+from typing import Any
+
+import fitz
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import (
+    PdfPipelineOptions,
+)
+from docling.document_converter import (
+    DocumentConverter,
+    PdfFormatOption,
+)
+from src.processing.table_pipeline import TablePipeline
+
+
+class TableProcessingService:
+    """
+    Processes table pages after document parsing.
+
+    Routes:
+    - local_table_page:
+        reuse accepted Docling table data
+    - complex_table_page:
+        render page and use the existing
+        vision TablePipeline
+
+    Completed pages are checkpointed immediately.
+    """
+
+    def __init__(self):
+        self.table_pipeline = TablePipeline()
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_ocr = False
+        pipeline_options.do_table_structure = True
+
+        self.table_detector = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(
+                    pipeline_options=pipeline_options
+                )
+            }
+        )
+        
+
+    def process(
+        self,
+        parsed_path: Path,
+        output_path: Path,
+    ) -> dict[str, Any]:
+
+        parsed_document = json.loads(
+            parsed_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        result = self._load_checkpoint(
+            output_path
+        )
+
+        processed_page_numbers = set(
+            result["metadata"].get(
+                "processed_page_numbers",
+                [],
+            )
+        )
+
+        table_pages = [
+            page
+            for page in parsed_document["pages"]
+            if page["metadata"]["route"]
+            in {
+                "local_table_page",
+                "complex_table_page",
+            }
+        ]
+
+        print("\n======= TABLE PROCESSING PLAN =======")
+        print(
+            f"Table pages: {len(table_pages)}"
+        )
+        print(
+            "Already processed:",
+            len(processed_page_numbers),
+        )
+        print(
+            "Pending:",
+            sum(
+                1
+                for page in table_pages
+                if page["page_number"]
+                not in processed_page_numbers
+            ),
+        )
+        print("=====================================\n")
+
+        for page in table_pages:
+
+            page_number = page["page_number"]
+
+            if page_number in processed_page_numbers:
+                print(
+                    f"Skipping page {page_number}"
+                    " (already processed)."
+                )
+                continue
+
+            route = page["metadata"]["route"]
+
+            print(
+                f"Processing page {page_number}"
+                f" via {route}..."
+            )
+
+            try:
+                if route == "local_table_page":
+                    page_result = (
+                        self._process_local_page(
+                            page
+                        )
+                    )
+
+                elif route == "complex_table_page":
+                    page_result = (
+                        self._process_complex_page(
+                            page
+                        )
+                    )
+
+                else:
+                    continue
+
+                result["pages"].append(
+                    page_result
+                )
+
+                processed_page_numbers.add(
+                    page_number
+                )
+
+                result["metadata"][
+                    "processed_page_numbers"
+                ] = sorted(
+                    processed_page_numbers
+                )
+
+                result["metadata"][
+                    "failed_pages"
+                ] = [
+                    failure
+                    for failure in result[
+                        "metadata"
+                    ].get(
+                        "failed_pages",
+                        [],
+                    )
+                    if failure["page_number"]
+                    != page_number
+                ]
+
+                self._save_checkpoint(
+                    result=result,
+                    output_path=output_path,
+                )
+
+            except Exception as error:
+                print(
+                    f"Failed page {page_number}:"
+                    f" {error}"
+                )
+
+                failures = result[
+                    "metadata"
+                ].setdefault(
+                    "failed_pages",
+                    [],
+                )
+
+                failures = [
+                    failure
+                    for failure in failures
+                    if failure["page_number"]
+                    != page_number
+                ]
+
+                failures.append(
+                    {
+                        "page_number": page_number,
+                        "error": str(error),
+                    }
+                )
+
+                result["metadata"][
+                    "failed_pages"
+                ] = failures
+
+                self._save_checkpoint(
+                    result=result,
+                    output_path=output_path,
+                )
+
+        return result
+
+    def _process_local_page(
+        self,
+        page: dict[str, Any],
+    ) -> dict[str, Any]:
+
+        processed_tables = []
+
+        for decision in page[
+            "metadata"
+        ].get(
+            "table_decisions",
+            [],
+        ):
+            if not decision.get(
+                "usable",
+                False,
+            ):
+                continue
+
+            table_data = decision.get(
+                "local_table_data"
+            )
+
+            if not table_data:
+                raise ValueError(
+                    "Accepted local table data "
+                    "is missing."
+                )
+
+            table_data = {
+                "table_title": (
+                    f"Table on page "
+                    f"{page['page_number']}"
+                ),
+                **table_data,
+                "metadata": {
+                    "source": "docling_local",
+                    "table_index": decision[
+                        "table_index"
+                    ],
+                },
+            }
+
+            extracted_table, chunks = (
+                self.table_pipeline
+                .process_extracted_data(
+                    table_data=table_data,
+                    page_number=page[
+                        "page_number"
+                    ],
+                )
+            )
+
+            processed_tables.append(
+                {
+                    "table": (
+                        extracted_table.model_dump()
+                    ),
+                    "chunks": chunks,
+                }
+            )
+
+        return {
+            "page_number": page["page_number"],
+            "route": "local_table_page",
+            "tables": processed_tables,
+        }
+
+    def _process_complex_page(
+        self,
+        page: dict[str, Any],
+    ) -> dict[str, Any]:
+
+        page_number = page["page_number"]
+
+        page_path = Path(
+            page["metadata"]["page_path"]
+        )
+
+        image_path = self._render_table_crop(
+            page_path=page_path,
+            page_number=page_number,
+        )
+
+        layout = self.table_pipeline.analyze(
+            image_path=image_path
+        )
+
+        strategy = self.table_pipeline.choose_strategy(
+            layout=layout,
+        )
+        table_data = (
+            self.table_pipeline.prepare_extraction(
+                image_path=image_path,
+                page_number=page_number,
+                layout=layout,
+                strategy=strategy,
+            )
+        )
+
+        extracted_table, chunks = (
+            self.table_pipeline
+            .process_extracted_data(
+                table_data=table_data,
+                page_number=page_number,
+            )
+        )
+
+        return {
+            "page_number": page_number,
+            "route": "complex_table_page",
+            "image_path": str(image_path),
+            "layout": layout,
+            "strategy": strategy,
+            "tables": [
+                {
+                    "table": (
+                        extracted_table.model_dump()
+                    ),
+                    "chunks": chunks,
+                }
+            ],
+        }
+
+    def _render_page(
+        self,
+        page_path: Path,
+        page_number: int,
+    ) -> Path:
+
+        output_dir = (
+            page_path.parent
+            / "table_images"
+        )
+
+        output_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        image_path = (
+            output_dir
+            / f"page_{page_number}.png"
+        )
+
+        if image_path.exists():
+            return image_path
+
+        document = fitz.open(page_path)
+
+        try:
+            pixmap = document[0].get_pixmap(
+                matrix=fitz.Matrix(2, 2),
+                alpha=False,
+            )
+
+            pixmap.save(
+                str(image_path)
+            )
+
+        finally:
+            document.close()
+
+        return image_path
+    
+    def _render_table_crop(
+        self,
+        page_path: Path,
+        page_number: int,
+    ) -> Path:
+
+        output_dir = (
+            page_path.parent
+            / "table_images"
+            / "crops"
+        )
+
+        output_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        image_path = (
+            output_dir
+            / f"page_{page_number}_table.png"
+        )
+
+        if image_path.exists():
+            return image_path
+
+        result = self.table_detector.convert(
+            page_path
+        )
+
+        document = result.document
+
+        if not document.tables:
+            raise ValueError(
+                "Docling detected no table "
+                "for complex table page."
+            )
+
+        table = document.tables[0]
+
+        if not table.prov:
+            raise ValueError(
+                "Detected table has no "
+                "bounding box."
+            )
+
+        bbox = table.prov[0].bbox
+
+        pdf = fitz.open(page_path)
+
+        try:
+            pdf_page = pdf[0]
+
+            page_height = pdf_page.rect.height
+
+            # Docling bbox uses bottom-left origin.
+            clip = fitz.Rect(
+                bbox.l,
+                page_height - bbox.t,
+                bbox.r,
+                page_height - bbox.b,
+            )
+
+            # Small padding so border text is not cut.
+            padding = 8
+
+            clip = fitz.Rect(
+                max(
+                    pdf_page.rect.x0,
+                    clip.x0 - padding,
+                ),
+                max(
+                    pdf_page.rect.y0,
+                    clip.y0 - padding,
+                ),
+                min(
+                    pdf_page.rect.x1,
+                    clip.x1 + padding,
+                ),
+                min(
+                    pdf_page.rect.y1,
+                    clip.y1 + padding,
+            ),
+            )    
+
+            pixmap = pdf_page.get_pixmap(
+                matrix=fitz.Matrix(3, 3),
+                clip=clip,
+                alpha=False,
+            )
+
+            pixmap.save(
+                str(image_path)
+            )
+
+        finally:
+            pdf.close()
+
+        return image_path
+
+    def _load_checkpoint(
+        self,
+        output_path: Path,
+    ) -> dict[str, Any]:
+
+        if output_path.exists():
+            checkpoint = json.loads(
+                output_path.read_text(
+                    encoding="utf-8"
+                )
+            )
+
+            print(
+                "Loaded table checkpoint:",
+                len(
+                    checkpoint.get(
+                        "metadata",
+                        {},
+                    ).get(
+                        "processed_page_numbers",
+                        [],
+                    )
+                ),
+                "pages already processed.",
+            )
+
+            return checkpoint
+
+        return {
+            "pages": [],
+            "metadata": {
+                "processed_page_numbers": [],
+                "failed_pages": [],
+            },
+        }
+
+    def _save_checkpoint(
+        self,
+        result: dict[str, Any],
+        output_path: Path,
+    ) -> None:
+
+        output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        output_path.write_text(
+            json.dumps(
+                result,
+                indent=2,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )

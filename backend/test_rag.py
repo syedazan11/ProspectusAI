@@ -1,28 +1,38 @@
-from src.retrieval.retriever import Retriever
-from src.retrieval.context_builder import ContextBuilder
-from src.llm.llm_service import LLMService
+﻿from pathlib import Path
+
+from src.services.rag_service import RAGService
 
 
-question = "What is the eligibility criteria?"
-
-retriever = Retriever()
-context_builder = ContextBuilder()
-llm = LLMService()
-
-chunks = retriever.retrieve(
-    query=question,
-    top_k=5,
+graph_path = Path(
+    "../storage/graph/UGProspectus2025.json"
 )
 
-context = context_builder.build(chunks)
+rag = RAGService(
+    graph_path=graph_path,
+)
 
-answer = llm.generate_answer(
+question = "What is the eligibility criteria for category R-1(g)?"
+
+result = rag.ask(
     question=question,
-    context=context,
+    vector_top_k=10,
+    graph_top_k=10,
 )
 
-print("\nQUESTION:")
-print(question)
+print("\n=== QUESTION ===")
+print(result["question"])
 
-print("\nANSWER:")
-print(answer)
+print("\n=== ANSWER ===")
+print(result["answer"])
+
+print("\n=== SOURCES ===")
+for source in result["sources"]:
+    print(
+        f"Page {source['page_number']} | "
+        f"{source['heading']} | "
+        f"{source['document']}"
+    )
+
+print("\n=== RETRIEVAL METADATA ===")
+print(result["retrieval_metadata"])
+

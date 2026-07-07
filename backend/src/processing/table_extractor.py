@@ -42,10 +42,50 @@ class TableExtractor:
 
         for row in rows:
 
-            normalized_row = {
-                column: row.get(column)
-                for column in columns
-            }
+            # Adaptive-table format:
+            # {
+            #   "category": "...",
+            #   "description": "...",
+            #   "values": [...]
+            # }
+            if "values" in row:
+
+                values = list(
+                    row.get("values", [])
+                )
+
+                normalized_row = {
+                    "Category": row.get(
+                        "category",
+                        "",
+                    ),
+                    "Description": row.get(
+                        "description",
+                        "",
+                    ),
+                }
+
+                for index, value in enumerate(
+                    values
+                ):
+                    column_name = (
+                        columns[index]
+                        if index < len(columns)
+                        and str(columns[index]).strip()
+                        else f"Value_{index + 1}"
+                    )
+
+                    normalized_row[
+                        str(column_name)
+                    ] = value
+
+            # Normal dictionary-table format.
+            else:
+
+                normalized_row = {
+                    column: row.get(column)
+                    for column in columns
+                }
 
             normalized_rows.append(
                 normalized_row

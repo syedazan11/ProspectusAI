@@ -9,7 +9,9 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from groq import Groq
 from openai import OpenAI
-
+from src.processing.table_layout_analyzer import (
+    TableLayoutAnalyzer,
+)
 
 load_dotenv()
 
@@ -25,55 +27,35 @@ class VisionTableExtractor:
     """
 
     def __init__(self):
-        self.provider = os.getenv(
-            "VISION_PROVIDER"
-        )
+        self.provider = os.getenv("VISION_PROVIDER")
 
-        self.api_key = (
-            os.getenv("VISION_API_KEY")
-            or os.getenv("LLM_API_KEY")
-        )
+        self.api_key = os.getenv("VISION_API_KEY") or os.getenv("LLM_API_KEY")
 
-        self.model = os.getenv(
-            "VISION_MODEL"
-        )
+        self.model = os.getenv("VISION_MODEL")
 
         if not self.provider:
-            raise ValueError(
-                "VISION_PROVIDER is missing."
-            )
+            raise ValueError("VISION_PROVIDER is missing.")
 
         self.provider = self.provider.lower()
 
         if not self.api_key:
-            raise ValueError(
-                "Vision API key is missing."
-            )
+            raise ValueError("Vision API key is missing.")
 
         if not self.model:
-            raise ValueError(
-                "Vision model is missing."
-            )
+            raise ValueError("Vision model is missing.")
 
         if self.provider == "groq":
-            self.client = Groq(
-                api_key=self.api_key
-            )
+            self.client = Groq(api_key=self.api_key)
 
         elif self.provider == "openai":
-            self.client = OpenAI(
-                api_key=self.api_key
-            )
+            self.client = OpenAI(api_key=self.api_key)
 
         elif self.provider == "anthropic":
-            self.client = Anthropic(
-                api_key=self.api_key
-            )
+            self.client = Anthropic(api_key=self.api_key)
 
         else:
             raise ValueError(
-                f"Unsupported vision provider: "
-                f"{self.provider}"
+                f"Unsupported vision provider: {self.provider}"
             )
 
     def extract_single(
@@ -100,14 +82,28 @@ Return ONLY valid JSON with this structure:
 
 Rules:
 
-1. Preserve all visible column names.
-2. Preserve all visible row values.
-3. Every row must be a JSON object.
-4. Row keys must match the column names.
-5. Use null for unreadable cells.
-6. Do not guess missing information.
-7. Do not add information not visible in the image.
-8. Return JSON only.
+1. Preserve all visible column names exactly.
+2. Preserve every visually separate table row as a
+   separate JSON object.
+3. NEVER merge two adjacent rows, row labels, categories,
+   abbreviations, or values into one row.
+4. If two labels appear on separate horizontal rows,
+   they MUST produce two separate JSON row objects.
+5. Keep each value aligned with the row and column where
+   it visibly appears.
+6. Every row must be a JSON object.
+7. Row keys must match the column names exactly.
+8. Preserve zero values. Do not skip them.
+9. Use null for genuinely unreadable cells.
+10. Do not guess missing information.
+11. Do not calculate, combine, summarize, or reconstruct
+    values from multiple rows.
+12. Before returning JSON, verify that no two visually
+    separate rows were merged together.
+13. If a row label or category is accidentally repeated
+    identically within the same cell, keep it only once.
+    Example: "ABC ABC" must become "ABC".
+14. Return JSON only.
 """
 
         raw_response = self._send_vision_request(
@@ -115,9 +111,60 @@ Rules:
             prompt=prompt,
         )
 
+        debug_dir = (
+            image_path.parent
+            / "vision_debug"
+        )
+
+        debug_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        debug_path = (
+            debug_dir
+            / f"page_{page_number}_raw.txt"
+        )
+
+        debug_path.write_text(
+            raw_response,
+            encoding="utf-8",
+        )
+
+        print(
+            f"Saved raw vision response: "
+            f"{debug_path}"
+        )
+
         result = self._parse_json_response(
             raw_response
         )
+
+        for row in result.get("rows", []):
+            for key, value in row.items():
+
+                if not isinstance(value, str):
+                    continue
+
+                parts = value.strip().split()
+
+                if (
+                    len(parts) % 2 == 0
+                    and parts[: len(parts) // 2]
+                    == parts[len(parts) // 2 :]
+                ):
+                    row[key] = " ".join(
+                        parts[: len(parts) // 2]
+                    )
+
+        if (
+            "columns" not in result
+            or "rows" not in result
+        ):
+            raise ValueError(
+                "Single-table vision response "
+                "is missing columns or rows."
+            )
 
         result["metadata"] = {
             **result.get("metadata", {}),
@@ -126,7 +173,7 @@ Rules:
         }
 
         return result
-    
+
     def extract_adaptive(
         self,
         image_path: Path,
@@ -145,19 +192,54 @@ Rules:
             / f"page_{page_number}"
         )
 
-        output_dir.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        with Image.open(image_path) as image:
+        with Image.open(image_path) as source_image:
+
+            # Dense prospectus tables may be stored sideways.
+            # Rotate portrait table crops 90 degrees clockwise
+            # before adaptive block extraction.
+            if source_image.height > source_image.width:
+                image = source_image.rotate(
+                    270,
+                    expand=True,
+                )
+
+                normalized_path = (
+                    output_dir
+                    / f"page_{page_number}_normalized.png"
+                )
+
+                image.save(normalized_path)
+
+                print(
+                    f"Rotated page {page_number} "
+                    f"90 degrees clockwise."
+                )
+
+            else:
+                image = source_image.copy()
 
             width, height = image.size
+
+            # Re-analyze the normalized image.
+            # The original layout is stale after rotation.
+            if source_image.height > source_image.width:
+                normalized_layout = TableLayoutAnalyzer().analyze(
+                    image_path=normalized_path,
+                )
+            else:
+                normalized_layout = layout
+
+            print(
+                "Normalized layout:",
+                normalized_layout,
+            )
 
             blocks = self._create_adaptive_blocks(
                 width=width,
                 height=height,
-                layout=layout,
+                layout=normalized_layout,
             )
 
             saved_blocks = []
@@ -174,8 +256,7 @@ Rules:
                 )
 
                 block_path = (
-                    output_dir
-                    / f"block_{block['block_index']}.png"
+                    output_dir / f"block_{block['block_index']}.png"
                 )
 
                 cropped_image.save(block_path)
@@ -191,9 +272,7 @@ Rules:
 
         for block in saved_blocks:
 
-            block_path = Path(
-                block["image_path"]
-            )
+            block_path = Path(block["image_path"])
 
             prompt = f"""
         Extract the visible portion of this table.
@@ -231,9 +310,74 @@ Rules:
                 prompt=prompt,
             )
 
-            extracted_data = self._parse_json_response(
-                raw_response
+            debug_dir = output_dir / "vision_debug"
+            debug_dir.mkdir(
+                parents=True,
+                exist_ok=True,
             )
+
+            debug_path = (
+                debug_dir
+                / f"block_{block['block_index']}_raw.txt"
+            )
+
+            debug_path.write_text(
+                raw_response,
+                encoding="utf-8",
+            )
+
+            try:
+                extracted_data = self._parse_json_response(
+                    raw_response
+                )
+
+            except ValueError:
+
+                print(
+                    f"Block {block['block_index']} "
+                    f"returned invalid JSON. Retrying once..."
+                )
+
+                retry_prompt = """
+            Extract the visible table block.
+
+            Return ONLY compact valid JSON:
+
+            {
+              "columns": [],
+              "rows": [
+                {
+                  "category": "",
+                  "description": "",
+                  "values": []
+                }
+              ]
+            }
+
+            Rules:
+            1. One visible table row = one JSON row.
+            2. Never merge adjacent rows.
+            3. Keep values in exact left-to-right order.
+            4. Preserve zero values.
+            5. Use null only for unreadable cells.
+            6. No explanations.
+            7. No markdown.
+            8. Return compact JSON only.
+            """
+
+                raw_response = self._send_vision_request(
+                    image_path=block_path,
+                    prompt=retry_prompt,
+                )
+
+                debug_path.write_text(
+                    raw_response,
+                    encoding="utf-8",
+                )
+
+                extracted_data = self._parse_json_response(
+                    raw_response
+                )
 
             extracted_blocks.append(
                 {
@@ -252,7 +396,6 @@ Rules:
                 "output_dir": str(output_dir),
             },
         }
-    
 
     def recover_rows(
         self,
@@ -264,41 +407,29 @@ Rules:
         recovery_results = []
 
         recovery_by_index = {
-            row["row_index"]: row
-            for row in recovery_rows
+            row["row_index"]: row for row in recovery_rows
         }
 
         source_by_index = {
-            block["block_index"]: block
-            for block in source_blocks
+            block["block_index"]: block for block in source_blocks
         }
 
         for recovery_block in recovery_blocks:
 
-            block_index = recovery_block[
-                "block_index"
-            ]
+            block_index = recovery_block["block_index"]
 
-            source_block = source_by_index.get(
-                block_index
-            )
+            source_block = source_by_index.get(block_index)
 
             if not source_block:
                 continue
 
-            image_path = Path(
-                source_block["image_path"]
-            )
+            image_path = Path(source_block["image_path"])
 
             requested_rows = []
 
-            for row_index in recovery_block[
-                "row_indexes"
-            ]:
+            for row_index in recovery_block["row_indexes"]:
 
-                recovery_row = recovery_by_index.get(
-                    row_index
-                )
+                recovery_row = recovery_by_index.get(row_index)
 
                 if not recovery_row:
                     continue
@@ -306,15 +437,9 @@ Rules:
                 requested_rows.append(
                     {
                         "row_index": row_index,
-                        "category": recovery_row[
-                            "category"
-                        ],
-                        "recovery_scope": recovery_row[
-                            "recovery_scope"
-                        ],
-                        "missing_columns": recovery_row[
-                            "missing_columns"
-                        ],
+                        "category": recovery_row["category"],
+                        "recovery_scope": recovery_row["recovery_scope"],
+                        "missing_columns": recovery_row["missing_columns"],
                     }
                 )
 
@@ -327,10 +452,7 @@ Rules:
 
     Requested rows:
 
-    {json.dumps(
-        requested_rows,
-        indent=2,
-    )}
+    {json.dumps(requested_rows, indent=2)}
 
     Return ONLY valid JSON:
 
@@ -365,24 +487,16 @@ Rules:
                 prompt=prompt,
             )
 
-            extracted_data = (
-                self._parse_json_response(
-                    raw_response
-                )
-            )
+            extracted_data = self._parse_json_response(raw_response)
 
             recovery_results.append(
                 {
                     "block_index": block_index,
-                    "rows": extracted_data.get(
-                        "rows",
-                        [],
-                    ),
+                    "rows": extracted_data.get("rows", []),
                 }
             )
 
         return recovery_results
-
 
     def _create_adaptive_blocks(
         self,
@@ -398,71 +512,88 @@ Rules:
 
         target_columns_per_block = 10
 
-        column_based_count = (
-            estimated_columns
-            + target_columns_per_block
-            - 1
-        ) // target_columns_per_block
-
-        target_block_width = max(
-            int(height * 0.40),
-            1,
-        )
-
-        geometry_based_count = (
-            width
-            + target_block_width
-            - 1
-        ) // target_block_width
-
-        block_count = max(
+        column_count = max(
             2,
-            column_based_count,
-            geometry_based_count,
+            (
+                estimated_columns
+                + target_columns_per_block
+                - 1
+            )
+            // target_columns_per_block,
         )
 
-        block_count = min(
-            block_count,
-            8,
-        )
+        column_count = min(column_count, 8)
 
-        overlap_ratio = 0.15
+        # Dense tables must also be split vertically.
+        # Keep roughly 8-10 visible rows per block.
+        row_band_count = 3
 
-        block_width = width / block_count
-        overlap = int(
-            block_width * overlap_ratio
-        )
+        column_width = width / column_count
+        row_band_height = height / row_band_count
+
+        column_overlap = int(column_width * 0.15)
+        row_overlap = int(row_band_height * 0.08)
 
         blocks = []
+        block_index = 1
 
-        for index in range(block_count):
+        for row_band_index in range(row_band_count):
 
-            left = int(
-                index * block_width
+            top = int(
+                row_band_index * row_band_height
             )
 
-            right = int(
-                (index + 1) * block_width
+            bottom = int(
+                (row_band_index + 1)
+                * row_band_height
             )
 
-            if index > 0:
-                left -= overlap
+            if row_band_index > 0:
+                top -= row_overlap
 
-            if index < block_count - 1:
-                right += overlap
+            if row_band_index < row_band_count - 1:
+                bottom += row_overlap
 
-            left = max(left, 0)
-            right = min(right, width)
+            top = max(top, 0)
+            bottom = min(bottom, height)
 
-            blocks.append(
-                {
-                    "block_index": index + 1,
-                    "left": left,
-                    "top": 0,
-                    "right": right,
-                    "bottom": height,
-                }
-            )
+            for column_band_index in range(column_count):
+
+                left = int(
+                    column_band_index * column_width
+                )
+
+                right = int(
+                    (column_band_index + 1)
+                    * column_width
+                )
+
+                if column_band_index > 0:
+                    left -= column_overlap
+
+                if column_band_index < column_count - 1:
+                    right += column_overlap
+
+                left = max(left, 0)
+                right = min(right, width)
+
+                blocks.append(
+                    {
+                        "block_index": block_index,
+                        "row_band_index": (
+                            row_band_index
+                        ),
+                        "column_band_index": (
+                            column_band_index
+                        ),
+                        "left": left,
+                        "top": top,
+                        "right": right,
+                        "bottom": bottom,
+                    }
+                )
+
+                block_index += 1
 
         return blocks
 
@@ -471,9 +602,7 @@ Rules:
         image_path: Path,
     ) -> str:
 
-        return base64.b64encode(
-            image_path.read_bytes()
-        ).decode("utf-8")
+        return base64.b64encode(image_path.read_bytes()).decode("utf-8")
 
     def _parse_json_response(
         self,
@@ -481,6 +610,11 @@ Rules:
     ) -> dict[str, Any]:
 
         text = response_text.strip()
+
+        if not text:
+            raise ValueError(
+                "Vision model returned an empty response."
+            )
 
         if text.startswith("```json"):
             text = text[7:]
@@ -496,10 +630,11 @@ Rules:
         try:
             result = json.loads(text)
 
-        except json.JSONDecodeError as error:
+        except json.JSONDecodeError:
             raise ValueError(
-                "Vision model returned invalid JSON."
-            ) from error
+                "Vision model response was truncated "
+                "or contained invalid JSON."
+            )
 
         if not isinstance(result, dict):
             raise ValueError(
@@ -514,44 +649,37 @@ Rules:
         prompt: str,
     ) -> str:
 
-        encoded_image = self._encode_image(
-            image_path
-        )
+        encoded_image = self._encode_image(image_path)
 
         if self.provider in ("groq", "openai"):
 
-            response = (
-                self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": prompt,
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": prompt,
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": (
+                                        "data:image/png;base64,"
+                                        + encoded_image
+                                    )
                                 },
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": (
-                                            "data:image/png;base64,"
-                                            + encoded_image
-                                        )
-                                    },
-                                },
-                            ],
-                        }
-                    ],
-                    temperature=0,
-                )
+                            },
+                        ],
+                    }
+                ],
+                temperature=0,
+                max_tokens=8192,
             )
 
-            return (
-                response.choices[0]
-                .message.content
-                or ""
-            )
+            return response.choices[0].message.content or ""
 
         if self.provider == "anthropic":
 
@@ -582,7 +710,4 @@ Rules:
 
             return response.content[0].text
 
-        raise ValueError(
-            f"Unsupported vision provider: "
-            f"{self.provider}"
-        )
+        raise ValueError(f"Unsupported vision provider: {self.provider}")

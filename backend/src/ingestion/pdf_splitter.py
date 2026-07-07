@@ -15,7 +15,12 @@ class PDFSplitter:
 
         project_root = Path(__file__).resolve().parents[3]
 
-        pages_dir = project_root / "storage" / "pages"
+        pages_dir = (
+            project_root
+            / "storage"
+            / "pages"
+            / pdf_path.stem
+        )
 
         pages_dir.mkdir(
             parents=True,

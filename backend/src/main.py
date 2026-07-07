@@ -4,12 +4,19 @@ from fastapi import FastAPI
 
 
 from src.api.chat import router as chat_router
+from src.api.admin import router as admin_router
 
 app = FastAPI(title="ProspectusAI")
 app.include_router(
     chat_router,
     prefix="/api/v1",
     tags=["Chat"],
+)
+
+app.include_router(
+    admin_router,
+    prefix="/api/v1/admin",
+    tags=["Admin"],
 )
 
 
@@ -31,8 +38,18 @@ def parse_document():
     cleaner = DocumentCleaner()
     chunker = DocumentChunker()
 
-    pdf_path = Path(
-        r"C:\Users\syyea\Projects\ProspectusAI\storage\uploads\testingnedprospect.pdf"
+    from src.services.document_manager import DocumentManager
+
+    document_manager = DocumentManager()
+
+    document_id = (
+        document_manager.get_active_document_id()
+    )
+
+    pdf_path = (
+        document_manager.get_upload_path(
+            document_id
+        )
     )
 
     pdf = loader.validate(pdf_path)
