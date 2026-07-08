@@ -1,0 +1,45 @@
+# ==========================
+# Web Framework
+# ==========================
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+
+# ==========================
+# Document Processing
+# ==========================
+docling
+
+# ==========================
+# Vector Database
+# ==========================
+qdrant-client
+
+# ==========================
+# Embeddings & Retrieval
+# ==========================
+sentence-transformers
+rank-bm25
+
+# ==========================
+# LLM
+# ==========================
+groq
+
+# ==========================
+# Configuration
+# ==========================
+python-dotenv
+pydantic-settings
+
+# ==========================
+# File Uploads
+# ==========================
+python-multipart
+
+# ==========================
+# Authentication
+# ==========================
+python-jose[cryptography]
+passlib[bcrypt]
+pymupdf
+python-dotenv
