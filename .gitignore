@@ -30,3 +30,27 @@ backend/experiments/table_extraction/vision_sections/
 
 # Generated storage data
 storage/
+
+# Secrets
+.env
+*.env
+!.env.example
+backend/.env
+
+# Python environments and caches
+venv/
+.venv/
+backend/venv/
+__pycache__/
+*.py[cod]
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Runtime and temporary files
+*.log
+deployment_inventory.txt
+

@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
 from pathlib import Path
 import json
+import os
 import shutil
 from typing import Any
+
+from dotenv import load_dotenv
+from qdrant_client import QdrantClient
 
 
 class DocumentManager:
@@ -266,6 +270,91 @@ class DocumentManager:
             / document_id
         )
 
+    def list_documents(
+        self,
+    ) -> list[dict[str, Any]]:
+
+        registry = self.load_registry()
+
+        return sorted(
+            registry["documents"],
+            key=lambda document: (
+                int(document["year"]),
+                document.get("uploaded_at", ""),
+            ),
+            reverse=True,
+        )
+
+
+    def delete_document(
+        self,
+        document_id: str,
+    ) -> None:
+
+        registry = self.load_registry()
+
+        target = None
+
+        for document in registry["documents"]:
+
+            if (
+                document["document_id"]
+                == document_id
+            ):
+                target = document
+                break
+
+        if target is None:
+            raise ValueError(
+                f"Unknown document: {document_id}"
+            )
+
+        self._delete_document_files(
+            target
+        )
+
+        remaining = [
+            document
+            for document in registry["documents"]
+            if (
+                document["document_id"]
+                != document_id
+            )
+        ]
+
+        registry["documents"] = remaining
+
+        if (
+            registry.get("active_document_id")
+            == document_id
+        ):
+
+            ready_documents = [
+                document
+                for document in remaining
+                if document["status"] == "ready"
+            ]
+
+            ready_documents.sort(
+                key=lambda document: (
+                    int(document["year"]),
+                    document.get(
+                        "uploaded_at",
+                        "",
+                    ),
+                ),
+                reverse=True,
+            )
+
+            registry["active_document_id"] = (
+                ready_documents[0]["document_id"]
+                if ready_documents
+                else None
+            )
+
+        self.save_registry(registry)
+
+
     def enforce_retention(self) -> None:
         """
         Keep documents from only the newest two
@@ -336,3 +425,57 @@ class DocumentManager:
 
         if pages_dir.exists():
             shutil.rmtree(pages_dir)
+
+        rescue_dir = (
+            self.storage_dir
+            / "rescue"
+            / document_id
+        )
+
+        if rescue_dir.exists():
+            shutil.rmtree(
+                rescue_dir
+            )
+
+        collection_name = document.get(
+            "collection_name"
+        )
+
+        if collection_name:
+
+            try:
+
+                load_dotenv(
+                    self.project_root
+                    / "backend"
+                    / ".env"
+                )
+
+                qdrant = QdrantClient(
+                    url=os.getenv(
+                        "QDRANT_HOST"
+                    ),
+                    api_key=os.getenv(
+                        "QDRANT_API_KEY"
+                    ),
+                    timeout=180,
+                    check_compatibility=False,
+                )
+
+                if qdrant.collection_exists(
+                    collection_name
+                ):
+
+                    qdrant.delete_collection(
+                        collection_name=(
+                            collection_name
+                        )
+                    )
+
+            except Exception as error:
+
+                print(
+                    "WARNING: Could not delete "
+                    f"Qdrant collection "
+                    f"{collection_name}: {error}"
+                )
