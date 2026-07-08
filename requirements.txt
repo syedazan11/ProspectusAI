@@ -46,3 +46,4 @@ passlib[bcrypt]
 pymupdf
 python-dotenv
 SQLAlchemy
+llama-cloud
