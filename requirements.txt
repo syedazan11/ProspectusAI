@@ -1,49 +1,29 @@
 # ==========================
-# Web Framework
-# ==========================
-fastapi==0.116.1
-uvicorn[standard]==0.35.0
-SQLAlchemy==2.0.43
-psycopg[binary]==3.2.12
-
-# ==========================
-# Document Processing
-# ==========================
-docling
-
-# ==========================
-# Vector Database
-# ==========================
-qdrant-client
-
-# ==========================
-# Embeddings & Retrieval
-# ==========================
-sentence-transformers
-rank-bm25
-
-# ==========================
-# LLM
-# ==========================
-groq
-
-# ==========================
-# Configuration
-# ==========================
-python-dotenv
-pydantic-settings
-
-# ==========================
-# File Uploads
-# ==========================
-python-multipart
-
-# ==========================
 # Authentication
-# ==========================
-python-jose[cryptography]
-passlib[bcrypt]
-pymupdf
-python-dotenv
-SQLAlchemy
+# Configuration
+# Document Processing
+# Embeddings & Retrieval
+# File Uploads
+# LLM
+# Vector Database
+# Web Framework
+docling
+fastapi==0.116.1
+groq
 llama-cloud
+llama-cloud>=1.0
+passlib[bcrypt]
+psycopg[binary]==3.2.12
+psycopg2-binary
+pydantic-settings
+PyMuPDF
+python-dotenv
+python-jose[cryptography]
+python-multipart
+qdrant-client
+rank-bm25
+sentence-transformers
+SQLAlchemy
+SQLAlchemy==2.0.43
+streamlit
+uvicorn[standard]==0.35.0
