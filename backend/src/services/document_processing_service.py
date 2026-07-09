@@ -351,6 +351,164 @@ class DocumentProcessingService:
                 output_path=tables_path,
             )
 
+            # --------------------------------------
+            # Route-aware ingestion quality gate
+            # --------------------------------------
+
+            parsed_pages = parsed_data.get(
+                "pages",
+                [],
+            )
+
+            total_pages = len(parsed_pages)
+
+            if total_pages == 0:
+                raise ValueError(
+                    "Ingestion quality gate failed: "
+                    "no parsed pages."
+                )
+
+            usable_text_pages = 0
+
+            for page in parsed_pages:
+                page_text = (
+                    page.get("text")
+                    or page.get("markdown")
+                    or ""
+                ).strip()
+
+                if len(page_text.split()) >= 20:
+                    usable_text_pages += 1
+
+            parent_chunks = chunks.get(
+                "parent_chunks",
+                [],
+            )
+
+            child_chunks = chunks.get(
+                "child_chunks",
+                [],
+            )
+
+            detected_section_types = {
+                section.section_type
+                for section in sections
+            }
+
+            curriculum_detected = (
+                "curriculum"
+                in detected_section_types
+            )
+
+            seat_sections_detected = {
+                section_type
+                for section_type
+                in detected_section_types
+                if section_type.startswith(
+                    "seat_distribution_"
+                )
+            }
+
+            minimum_usable_text_pages = max(
+                5,
+                total_pages // 5,
+            )
+
+            minimum_parent_chunks = max(
+                5,
+                total_pages // 20,
+            )
+
+            minimum_child_chunks = max(
+                10,
+                total_pages // 10,
+            )
+
+            quality_errors = []
+
+            if (
+                usable_text_pages
+                < minimum_usable_text_pages
+            ):
+                quality_errors.append(
+                    "usable text coverage too low: "
+                    f"{usable_text_pages}/"
+                    f"{total_pages} pages"
+                )
+
+            if (
+                len(parent_chunks)
+                < minimum_parent_chunks
+            ):
+                quality_errors.append(
+                    "parent chunk coverage too low: "
+                    f"{len(parent_chunks)} "
+                    f"(minimum "
+                    f"{minimum_parent_chunks})"
+                )
+
+            if (
+                len(child_chunks)
+                < minimum_child_chunks
+            ):
+                quality_errors.append(
+                    "child chunk coverage too low: "
+                    f"{len(child_chunks)} "
+                    f"(minimum "
+                    f"{minimum_child_chunks})"
+                )
+
+            if (
+                curriculum_detected
+                and curriculum_result.get(
+                    "records",
+                    0,
+                ) <= 0
+            ):
+                quality_errors.append(
+                    "curriculum was detected but "
+                    "no curriculum records were produced"
+                )
+
+            print(
+                "\n=== INGESTION QUALITY GATE ==="
+            )
+            print(
+                f"Parsed pages: {total_pages}"
+            )
+            print(
+                "Usable text pages: "
+                f"{usable_text_pages}"
+            )
+            print(
+                "Parent chunks: "
+                f"{len(parent_chunks)}"
+            )
+            print(
+                "Child chunks: "
+                f"{len(child_chunks)}"
+            )
+            print(
+                "Detected sections: "
+                f"{sorted(detected_section_types)}"
+            )
+            print(
+                "Seat routes: "
+                f"{sorted(seat_sections_detected)}"
+            )
+            print(
+                "Curriculum records: "
+                f"{curriculum_result.get('records', 0)}"
+            )
+
+            if quality_errors:
+                raise ValueError(
+                    "Ingestion quality gate failed: "
+                    + "; ".join(quality_errors)
+                )
+
+            print("QUALITY GATE: PASS")
+
             indexer = Indexer(
                 collection_name=collection_name,
             )
