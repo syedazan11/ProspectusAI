@@ -372,22 +372,16 @@ class TableProcessingService:
         page_number = page["page_number"]
 
         print(
-            f"Skipping expensive vision extraction "
-            f"for complex page {page_number}; "
-            f"sending to page-review fallback."
+            f"Complex table page {page_number}; "
+            f"running existing extraction pipeline."
         )
 
-        return {
-            "page_number": page_number,
-            "route": "complex_table_page",
-            "status": "quarantined",
-            "reason": (
-                "Complex table extraction was skipped. "
-                "Use the original prospectus page for review."
-            ),
-            "attempts": [],
-            "tables": [],
-        }
+        return self._retry_with_vision(
+            page=page,
+            attempts=[],
+            original_route="complex_table_page",
+        )
+
 
     def _retry_with_vision(
         self,
