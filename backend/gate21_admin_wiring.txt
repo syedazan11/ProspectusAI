@@ -1,0 +1,362 @@
+﻿===== AUTH SERVICE =====
+import uuid
+
+import bcrypt
+
+from src.database.database import SessionLocal
+from src.database.models import AdminUser
+
+
+class AdminAuthService:
+
+    def authenticate(
+        self,
+        username: str,
+        password: str,
+    ) -> dict | None:
+
+        username = username.strip()
+
+        if not username or not password:
+            return None
+
+        with SessionLocal() as db:
+
+            admin = (
+                db.query(AdminUser)
+                .filter(
+                    AdminUser.username == username
+                )
+                .first()
+            )
+
+            if admin is None:
+                return None
+
+            try:
+                valid_password = bcrypt.checkpw(
+                    password.encode("utf-8"),
+                    admin.password_hash.encode("utf-8"),
+                )
+
+            except (ValueError, TypeError):
+                return None
+
+            if not valid_password:
+                return None
+
+            return {
+                "id": str(admin.id),
+                "username": admin.username,
+            }
+
+
+    def create_admin(
+        self,
+        username: str,
+        password: str,
+    ) -> dict:
+
+        username = username.strip()
+
+        if len(username) < 3:
+            raise ValueError(
+                "Username must contain at least "
+                "3 characters."
+            )
+
+        if len(password) < 8:
+            raise ValueError(
+                "Password must contain at least "
+                "8 characters."
+            )
+
+        with SessionLocal() as db:
+
+            existing = (
+                db.query(AdminUser)
+                .filter(
+                    AdminUser.username == username
+                )
+                .first()
+            )
+
+            if existing is not None:
+                raise ValueError(
+                    "Admin username already exists."
+                )
+
+            password_hash = (
+                bcrypt.hashpw(
+                    password.encode("utf-8"),
+                    bcrypt.gensalt(),
+                )
+                .decode("utf-8")
+            )
+
+            admin = AdminUser(
+                username=username,
+                password_hash=password_hash,
+            )
+
+            db.add(admin)
+            db.commit()
+            db.refresh(admin)
+
+            return {
+                "id": str(admin.id),
+                "username": admin.username,
+            }
+
+
+    def change_password(
+        self,
+        admin_id: str,
+        current_password: str,
+        new_password: str,
+    ) -> bool:
+
+        if len(new_password) < 8:
+            raise ValueError(
+                "New password must contain at least "
+                "8 characters."
+            )
+
+        try:
+            parsed_admin_id = uuid.UUID(
+                str(admin_id)
+            )
+
+        except (ValueError, TypeError):
+            return False
+
+        with SessionLocal() as db:
+
+            admin = (
+                db.query(AdminUser)
+                .filter(
+                    AdminUser.id == parsed_admin_id
+                )
+                .first()
+            )
+
+            if admin is None:
+                return False
+
+            try:
+                current_valid = bcrypt.checkpw(
+                    current_password.encode("utf-8"),
+                    admin.password_hash.encode("utf-8"),
+                )
+
+            except (ValueError, TypeError):
+                return False
+
+            if not current_valid:
+                return False
+
+            new_password_hash = (
+                bcrypt.hashpw(
+                    new_password.encode("utf-8"),
+                    bcrypt.gensalt(),
+                )
+                .decode("utf-8")
+            )
+
+            admin.password_hash = (
+                new_password_hash
+            )
+
+            db.commit()
+
+            return True
+
+
+    def admin_exists(
+        self,
+    ) -> bool:
+
+        with SessionLocal() as db:
+
+            return (
+                db.query(AdminUser.id)
+                .first()
+                is not None
+            )
+
+
+    def get_admin(
+        self,
+        admin_id: str,
+    ) -> dict | None:
+
+        try:
+            parsed_admin_id = uuid.UUID(
+                str(admin_id)
+            )
+
+        except (ValueError, TypeError):
+            return None
+
+        with SessionLocal() as db:
+
+            admin = (
+                db.query(AdminUser)
+                .filter(
+                    AdminUser.id == parsed_admin_id
+                )
+                .first()
+            )
+
+            if admin is None:
+                return None
+
+            return {
+                "id": str(admin.id),
+                "username": admin.username,
+            }
+
+===== ADMIN API =====
+from pathlib import Path
+import shutil
+
+from fastapi import (
+    APIRouter,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
+
+from src.services.document_manager import DocumentManager
+
+
+router = APIRouter()
+
+document_manager = DocumentManager()
+
+
+@router.post("/documents/upload")
+def upload_document(
+    year: int = Form(...),
+    official_url: str = Form(...),
+    file: UploadFile = File(...),
+):
+
+    filename = Path(
+        file.filename or ""
+    ).name
+
+    if not filename:
+        raise HTTPException(
+            status_code=400,
+            detail="A filename is required.",
+        )
+
+    if Path(filename).suffix.lower() != ".pdf":
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are allowed.",
+        )
+
+    if year < 2000 or year > 2100:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid prospectus year.",
+        )
+
+    official_url = official_url.strip()
+
+    if not official_url.startswith(
+        ("https://", "http://")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "A valid official prospectus URL "
+                "is required."
+            ),
+        )
+
+    uploads_dir = (
+        document_manager.storage_dir
+        / "uploads"
+    )
+
+    uploads_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    pdf_path = uploads_dir / filename
+
+    try:
+        with pdf_path.open("wb") as output:
+            shutil.copyfileobj(
+                file.file,
+                output,
+            )
+
+        entry = (
+            document_manager.register_document(
+                pdf_path=pdf_path,
+                year=year,
+                official_url=official_url,
+                status="uploaded",
+            )
+        )
+
+    except Exception:
+        if pdf_path.exists():
+            pdf_path.unlink()
+
+        raise
+
+    finally:
+        file.file.close()
+
+    return {
+        "message": "Prospectus uploaded successfully.",
+        "document": entry,
+    }
+
+
+@router.post("/documents/{document_id}/process")
+def process_document(
+    document_id: str,
+):
+
+    from src.services.document_processing_service import (
+        DocumentProcessingService,
+    )
+
+    processor = DocumentProcessingService()
+
+    try:
+        result = processor.process(
+            document_id=document_id,
+        )
+
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        ) from error
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": "Prospectus processed successfully.",
+        "result": result,
+    }
+
+===== TABLE CREATION =====
+
+src\services\admin_auth_service.py:9:class AdminAuthService:
+src\services\admin_auth_service.py:11:    def authenticate(
+
+

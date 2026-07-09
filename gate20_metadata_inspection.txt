@@ -1,0 +1,1103 @@
+﻿
+===== .\backend\src\processing\prospectus\seat_distribution_router.py =====
+import json
+from pathlib import Path
+from typing import Any
+
+
+class SeatDistributionRouter:
+    """
+    Routes seat-distribution table requests to dynamically
+    detected prospectus page ranges.
+
+    Page numbers are never hardcoded here.
+    """
+
+    SEAT_TERMS = (
+        "seat distribution",
+        "distribution of seats",
+        "seat allocation",
+        "seats available",
+        "available seats",
+        "number of seats",
+        "how many seats",
+        "total seats",
+        "regular seats",
+        "self finance seats",
+        "self-finance seats",
+    )
+
+    SELF_FINANCE_TERMS = (
+        "self finance",
+        "self-finance",
+        "self financing",
+        "self-financing",
+    )
+
+    REGULAR_TERMS = (
+        "regular",
+        "merit seats",
+        "open merit seats",
+    )
+
+    def route(
+        self,
+        question: str,
+        sections_path: Path | None,
+    ) -> dict[str, Any] | None:
+
+        normalized = " ".join(
+            question.casefold().split()
+        )
+
+        if not self._is_seat_request(normalized):
+            return None
+
+        sections = self._load_sections(
+            sections_path
+        )
+
+        if not sections:
+            return None
+
+        target_types = self._target_section_types(
+            normalized
+        )
+
+        matched_sections = [
+            section
+            for section in sections
+            if section.get("section_type")
+            in target_types
+        ]
+
+        if not matched_sections:
+            return None
+
+        document = self._document_id(
+            sections_path
+        )
+
+        page_references = []
+
+        for section in matched_sections:
+            section_type = section[
+                "section_type"
+            ]
+
+            label = self._section_label(
+                section_type
+            )
+
+            for page_number in range(
+                section["start_page"],
+                section["end_page"] + 1,
+            ):
+                page_references.append(
+                    {
+                        "document": document,
+                        "page_number": page_number,
+                        "page_path": None,
+                        "page_url": (
+                            "/api/v1/pages/"
+                            f"{document}/"
+                            f"{page_number}"
+                        ),
+                        "reason": (
+                            f"View {label} seat "
+                            "distribution."
+                        ),
+                    }
+                )
+
+        answer = self._build_answer(
+            matched_sections
+        )
+
+        return {
+            "question": question,
+            "answer": answer,
+            "status": "seat_distribution_pages",
+            "sources": [],
+            "page_references": page_references,
+            "retrieval": {
+                "route": "seat_distribution",
+                "vector_chunks": [],
+                "vector_chunk_count": 0,
+            },
+        }
+
+    def _is_seat_request(
+        self,
+        normalized: str,
+    ) -> bool:
+
+        return any(
+            term in normalized
+            for term in self.SEAT_TERMS
+        )
+
+    def _target_section_types(
+        self,
+        normalized: str,
+    ) -> set[str]:
+
+        wants_self_finance = any(
+            term in normalized
+            for term in self.SELF_FINANCE_TERMS
+        )
+
+        wants_regular = any(
+            term in normalized
+            for term in self.REGULAR_TERMS
+        )
+
+        if wants_self_finance and not wants_regular:
+            return {
+                "seat_distribution_self_finance"
+            }
+
+        if wants_regular and not wants_self_finance:
+            return {
+                "seat_distribution_regular"
+            }
+
+        return {
+            "seat_distribution_regular",
+            "seat_distribution_self_finance",
+        }
+
+    @staticmethod
+    def _load_sections(
+        sections_path: Path | None,
+    ) -> list[dict[str, Any]]:
+
+        if sections_path is None:
+            return []
+
+        if not sections_path.exists():
+            return []
+
+        try:
+            data = json.loads(
+                sections_path.read_text(
+                    encoding="utf-8"
+                )
+            )
+        except (
+            OSError,
+            json.JSONDecodeError,
+        ):
+            return []
+
+        sections = data.get("sections", [])
+
+        if not isinstance(sections, list):
+            return []
+
+        return sections
+
+    @staticmethod
+    def _document_id(
+        sections_path: Path,
+    ) -> str:
+
+        try:
+            data = json.loads(
+                sections_path.read_text(
+                    encoding="utf-8"
+                )
+            )
+
+            document_id = data.get(
+                "document_id"
+            )
+
+            if document_id:
+                return str(document_id)
+
+        except (
+            OSError,
+            json.JSONDecodeError,
+        ):
+            pass
+
+        return sections_path.stem
+
+    @staticmethod
+    def _section_label(
+        section_type: str,
+    ) -> str:
+
+        if (
+            section_type
+            == "seat_distribution_regular"
+        ):
+            return "regular"
+
+        return "self-finance"
+
+    def _build_answer(
+        self,
+        sections: list[dict[str, Any]],
+    ) -> str:
+
+        labels = [
+            self._section_label(
+                section["section_type"]
+            )
+            for section in sections
+        ]
+
+        if len(labels) == 1:
+            return (
+                f"The {labels[0]} seat distribution "
+                "is available in the prospectus. "
+                "Use the page links below to view "
+                "the official seat tables."
+            )
+
+        return (
+            "The regular and self-finance seat "
+            "distributions are available in the "
+            "prospectus. Use the page links below "
+            "to view the official seat tables."
+        )
+
+===== .\backend\src\schemas\chat.py =====
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class ChatRequest(BaseModel):
+    question: str
+
+
+class PageReference(BaseModel):
+    document: str
+    page_number: int
+    page_path: str | None = None
+    page_url: str | None = None
+    reason: str | None = None
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    status: str = "answered"
+
+    sources: list[dict[str, Any]] = Field(
+        default_factory=list
+    )
+
+    page_references: list[PageReference] = Field(
+        default_factory=list
+    )
+
+===== .\frontend\src\types\chat.ts =====
+export type ChatStatus =
+  | "answered"
+  | "needs_page_review"
+  | "seat_distribution_pages";
+
+export interface ChatSource {
+  document: string;
+  page_number: number;
+  heading: string;
+  score?: number | null;
+}
+
+export interface PageReference {
+  document: string;
+  page_number: number;
+  page_path?: string | null;
+  page_url?: string | null;
+  reason?: string | null;
+}
+
+export interface ChatSummary {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StoredMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources: ChatSource[];
+  page_references: PageReference[];
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  status?: ChatStatus;
+  sources?: ChatSource[];
+  pageReferences?: PageReference[];
+  isError?: boolean;
+  createdAt: number;
+}
+
+export interface ChatListResponse {
+  chats: ChatSummary[];
+}
+
+export interface ChatMessagesResponse {
+  messages: StoredMessage[];
+}
+
+export interface SendMessageResponse {
+  answer: string;
+  status: ChatStatus;
+  sources: ChatSource[];
+  page_references: PageReference[];
+  message: StoredMessage;
+}
+
+===== .\frontend\src\services\api.ts =====
+export const API_BASE_URL: string =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://127.0.0.1:8000";
+
+export class ApiError extends Error {
+  status?: number;
+
+  constructor(
+    message: string,
+    status?: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+interface RequestOptions {
+  method?:
+    | "GET"
+    | "POST"
+    | "PUT"
+    | "PATCH"
+    | "DELETE";
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const {
+    method = "GET",
+    body,
+    headers = {},
+  } = options;
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}${path}`,
+      {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+        body:
+          body !== undefined
+            ? JSON.stringify(body)
+            : undefined,
+      },
+    );
+  } catch {
+    throw new ApiError(
+      "Could not reach the ProspectusAI server. " +
+        "Please check your connection and try again.",
+    );
+  }
+
+  if (!response.ok) {
+    let message =
+      `Request failed with status ${response.status}`;
+
+    try {
+      const errorBody = await response.json();
+
+      if (
+        typeof errorBody?.detail === "string"
+      ) {
+        message = errorBody.detail;
+      } else if (
+        typeof errorBody?.message === "string"
+      ) {
+        message = errorBody.message;
+      }
+    } catch {
+      // Keep the default message.
+    }
+
+    throw new ApiError(
+      message,
+      response.status,
+    );
+  }
+
+  const text = await response.text();
+
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
+}
+
+export function buildPageUrl(
+  pageUrl: string,
+): string {
+  if (/^https?:\/\//i.test(pageUrl)) {
+    return pageUrl;
+  }
+
+  return (
+    `${API_BASE_URL}` +
+    `${pageUrl.startsWith("/") ? "" : "/"}` +
+    pageUrl
+  );
+}
+
+===== METADATA AND URL USAGES =====
+
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\main.py
+LineNumber : 97
+Line       :         "metadata": 
+             cleaned["metadata"],
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_merger.py
+LineNumber : 388
+Line       :             "metadata": {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 9
+Line       :     - separate metadata fields 
+             from numeric table columns
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 12
+Line       :     - trim only obvious extra 
+             leading metadata placeholders
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 17
+Line       :     METADATA_COLUMNS = {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 50
+Line       :                 
+             metadata_prefix_count,
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 65
+Line       :                         
+             metadata_prefix_count=(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 66
+Line       :                             
+             metadata_prefix_count
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 94
+Line       :         metadata_prefix_count 
+             = 0
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 106
+Line       :                 in 
+             self.METADATA_COLUMNS
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 108
+Line       :                 
+             metadata_prefix_count += 1
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 114
+Line       :             columns[metadata_pr
+             efix_count:],
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 115
+Line       :             
+             metadata_prefix_count,
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 122
+Line       :         metadata_prefix_count: 
+             int,
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 141
+Line       :         values = 
+             self._remove_metadata_prefix(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 143
+Line       :             
+             metadata_prefix_count=(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 144
+Line       :                 
+             metadata_prefix_count
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 168
+Line       :     def 
+             _remove_metadata_prefix(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 171
+Line       :         metadata_prefix_count: 
+             int,
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 174
+Line       :         if 
+             metadata_prefix_count == 0:
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_block_normalizer.py
+LineNumber : 180
+Line       :             
+             :metadata_prefix_count
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\ta
+             ble_recovery_planner.py
+LineNumber : 590
+Line       :             "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\vi
+             sion_table_extractor.py
+LineNumber : 169
+Line       :         result["metadata"] = {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\vi
+             sion_table_extractor.py
+LineNumber : 170
+Line       :             
+             **result.get("metadata", {}),
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\extraction\vi
+             sion_table_extractor.py
+LineNumber : 393
+Line       :             "metadata": {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\ingestion\par
+             ser.py
+LineNumber : 31
+Line       :     - routing metadata
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\ingestion\par
+             ser.py
+LineNumber : 96
+Line       :             
+             parsed.metadata["filename"] = 
+             pdf_path.name
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\ingestion\par
+             ser.py
+LineNumber : 214
+Line       :                 metadata={
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ch
+             unker.py
+LineNumber : 78
+Line       :                         
+             metadata={
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ch
+             unker.py
+LineNumber : 79
+Line       :                                
+              "document": document["metadata
+             "]["filename"],
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ch
+             unker.py
+LineNumber : 107
+Line       :                             
+             metadata={
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ch
+             unker.py
+LineNumber : 108
+Line       :                                
+                  "document": document["meta
+             data"]["filename"],
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\cl
+             eaner.py
+LineNumber : 108
+Line       :             "metadata": 
+             document["metadata"],
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_chunk_integrator.py
+LineNumber : 39
+Line       : #                 "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_chunk_integrator.py
+LineNumber : 72
+Line       : #                         
+             table_chunk["metadata"]
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_chunk_integrator.py
+LineNumber : 83
+Line       : #                             
+             "metadata": {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_chunk_integrator.py
+LineNumber : 159
+Line       :                 "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_chunk_integrator.py
+LineNumber : 179
+Line       :                 "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_chunk_integrator.py
+LineNumber : 212
+Line       :                             
+             "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_chunk_integrator.py
+LineNumber : 227
+Line       :                             
+             "metadata": {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_extractor.py
+LineNumber : 99
+Line       :             
+             metadata=table_data.get(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_extractor.py
+LineNumber : 100
+Line       :                 "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_parser.py
+LineNumber : 112
+Line       :             "metadata": {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_pipeline.py
+LineNumber : 209
+Line       :             "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\ta
+             ble_pipeline.py
+LineNumber : 213
+Line       :         
+             final_table["metadata"].update(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\seat_distribution_rout
+             er.py
+LineNumber : 99
+Line       :                         
+             "page_url": (
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\seat_distribution_rout
+             er.py
+LineNumber : 118
+Line       :             "status": 
+             "seat_distribution_pages",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\seat_distribution_rout
+             er.py
+LineNumber : 122
+Line       :                 "route": 
+             "seat_distribution",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\seat_distribution_rout
+             er.py
+LineNumber : 155
+Line       :                 "seat_distribut
+             ion_self_finance"
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\seat_distribution_rout
+             er.py
+LineNumber : 160
+Line       :                 
+             "seat_distribution_regular"
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\seat_distribution_rout
+             er.py
+LineNumber : 164
+Line       :             
+             "seat_distribution_regular",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\seat_distribution_rout
+             er.py
+LineNumber : 165
+Line       :             "seat_distribution_
+             self_finance",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\seat_distribution_rout
+             er.py
+LineNumber : 232
+Line       :             == 
+             "seat_distribution_regular"
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\section_detector.py
+LineNumber : 14
+Line       :     metadata: dict[str, Any]
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\section_detector.py
+LineNumber : 68
+Line       :             section_type="seat_
+             distribution_regular",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\section_detector.py
+LineNumber : 76
+Line       :             section_type="seat_
+             distribution_self_finance",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\section_detector.py
+LineNumber : 123
+Line       :             metadata={
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\processing\pr
+             ospectus\section_detector.py
+LineNumber : 166
+Line       :             metadata={
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\schemas\chat.
+             py
+LineNumber : 14
+Line       :     page_url: str | None = None
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\schemas\chunk
+             .py
+LineNumber : 9
+Line       :     metadata: dict = 
+             Field(default_factory=dict)
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\schemas\chunk
+             .py
+LineNumber : 18
+Line       :     metadata: dict = 
+             Field(default_factory=dict)
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\schemas\docum
+             ent.py
+LineNumber : 21
+Line       :     metadata: dict = 
+             Field(default_factory=dict)
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\schemas\docum
+             ent.py
+LineNumber : 31
+Line       :     metadata: dict = 
+             Field(default_factory=dict)
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\schemas\table
+             .py
+LineNumber : 17
+Line       :     metadata: dict[str, Any] = 
+             Field(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 77
+Line       :             
+             result["metadata"].get(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 86
+Line       :             if 
+             page["metadata"]["route"]
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 121
+Line       :             route = 
+             page["metadata"]["route"]
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 155
+Line       :                     
+             result["metadata"][
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 159
+Line       :                     
+             result["metadata"][
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 164
+Line       :                             
+             "metadata"
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 186
+Line       :                             
+             "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 201
+Line       :                             
+             "metadata"
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 214
+Line       :                     
+             result["metadata"][
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 222
+Line       :                     
+             result["metadata"][
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 233
+Line       :                 
+             result["metadata"][
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 238
+Line       :                         
+             "metadata"
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 261
+Line       :                         
+             "metadata"
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 277
+Line       :                 
+             result["metadata"][
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 298
+Line       :             "metadata"
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 318
+Line       :                 "metadata": {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 402
+Line       :             
+             page["metadata"]["page_path"]
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 659
+Line       :                 "metadata": {
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 674
+Line       :         metadata = 
+             checkpoint.setdefault(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 675
+Line       :             "metadata",
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 679
+Line       :         metadata.setdefault(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 683
+Line       :         metadata.setdefault(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 687
+Line       :         metadata.setdefault(
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\backend\src\services\tabl
+             e_processing_service.py
+LineNumber : 749
+Line       :         metadata[
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\frontend\src\components\c
+             hat\PageReviewCard.tsx
+LineNumber : 34
+Line       :                   ref.page_url
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\frontend\src\components\c
+             hat\PageReviewCard.tsx
+LineNumber : 35
+Line       :                     ? 
+             buildPageUrl(ref.page_url)
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\frontend\src\types\chat.t
+             s
+LineNumber : 4
+Line       :   | "seat_distribution_pages";
+
+Path       : C:\Users\syyea\Projects\Prospec
+             tusAI\frontend\src\types\chat.t
+             s
+LineNumber : 17
+Line       :   page_url?: string | null;
+
+
+

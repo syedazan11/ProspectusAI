@@ -1,0 +1,2018 @@
+﻿===== ADMIN API =====
+from pathlib import Path
+import shutil
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
+from fastapi.security import (
+    HTTPBasic,
+    HTTPBasicCredentials,
+)
+from pydantic import BaseModel
+
+from src.services.admin_auth_service import (
+    AdminAuthService,
+)
+from src.services.document_manager import (
+    DocumentManager,
+)
+
+
+router = APIRouter()
+
+document_manager = DocumentManager()
+admin_auth_service = AdminAuthService()
+
+security = HTTPBasic()
+
+
+class CreateAdminRequest(BaseModel):
+    username: str
+    password: str
+
+
+def require_admin(
+    credentials: HTTPBasicCredentials = Depends(
+        security
+    ),
+) -> dict:
+
+    admin = admin_auth_service.authenticate(
+        username=credentials.username,
+        password=credentials.password,
+    )
+
+    if admin is None:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_401_UNAUTHORIZED
+            ),
+            detail="Invalid admin credentials.",
+            headers={
+                "WWW-Authenticate": "Basic"
+            },
+        )
+
+    return admin
+
+
+@router.get("/me")
+def get_current_admin(
+    admin: dict = Depends(require_admin),
+):
+    return admin
+
+
+@router.get("/admins")
+def list_admins(
+    current_admin: dict = Depends(
+        require_admin
+    ),
+):
+
+    return {
+        "admins": (
+            admin_auth_service.list_admins()
+        ),
+        "current_admin_id": (
+            current_admin["id"]
+        ),
+        "maximum_admins": 2,
+    }
+
+
+
+@router.post("/admins")
+def create_admin(
+    request: CreateAdminRequest,
+    current_admin: dict = Depends(
+        require_admin
+    ),
+):
+
+    try:
+        admin = admin_auth_service.create_admin(
+            username=request.username,
+            password=request.password,
+        )
+
+    except ValueError as error:
+        message = str(error)
+
+        status_code = (
+            409
+            if (
+                "Maximum of 2 admins"
+                in message
+                or "already exists"
+                in message
+            )
+            else 400
+        )
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=message,
+        ) from error
+
+    return {
+        "message": "Admin created successfully.",
+        "admin": admin,
+        "created_by": current_admin["username"],
+    }
+
+
+@router.delete("/admins/{admin_id}")
+def delete_admin(
+    admin_id: str,
+    current_admin: dict = Depends(
+        require_admin
+    ),
+):
+
+    if admin_id == current_admin["id"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "You cannot delete your own "
+                "admin account."
+            ),
+        )
+
+    try:
+        deleted = (
+            admin_auth_service.delete_admin(
+                admin_id=admin_id
+            )
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(error),
+        ) from error
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Admin not found.",
+        )
+
+    return {
+        "message": "Admin deleted successfully.",
+    }
+
+
+@router.post("/documents/upload")
+def upload_document(
+    year: int = Form(...),
+    official_url: str = Form(...),
+    file: UploadFile = File(...),
+    admin: dict = Depends(require_admin),
+):
+
+    filename = Path(
+        file.filename or ""
+    ).name
+
+    if not filename:
+        raise HTTPException(
+            status_code=400,
+            detail="A filename is required.",
+        )
+
+    if Path(filename).suffix.lower() != ".pdf":
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are allowed.",
+        )
+
+    if year < 2000 or year > 2100:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid prospectus year.",
+        )
+
+    official_url = official_url.strip()
+
+    if not official_url.startswith(
+        ("https://", "http://")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "A valid official prospectus URL "
+                "is required."
+            ),
+        )
+
+    uploads_dir = (
+        document_manager.storage_dir
+        / "uploads"
+    )
+
+    uploads_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    pdf_path = uploads_dir / filename
+
+    try:
+        with pdf_path.open("wb") as output:
+            shutil.copyfileobj(
+                file.file,
+                output,
+            )
+
+        entry = (
+            document_manager.register_document(
+                pdf_path=pdf_path,
+                year=year,
+                official_url=official_url,
+                status="uploaded",
+            )
+        )
+
+        from src.services.document_processing_service import (
+            DocumentProcessingService,
+        )
+
+        processor = DocumentProcessingService()
+
+        result = processor.process(
+            document_id=entry["document_id"],
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=str(error),
+        ) from error
+
+    finally:
+        file.file.close()
+
+    return {
+        "message": (
+            "Prospectus uploaded and processed "
+            "successfully."
+        ),
+        "uploaded_by": admin["username"],
+        "document": entry,
+        "result": result,
+    }
+
+
+@router.post("/documents/{document_id}/process")
+def process_document(
+    document_id: str,
+    admin: dict = Depends(require_admin),
+):
+
+    from src.services.document_processing_service import (
+        DocumentProcessingService,
+    )
+
+    processor = DocumentProcessingService()
+
+    try:
+        result = processor.process(
+            document_id=document_id,
+        )
+
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        ) from error
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": (
+            "Prospectus processed successfully."
+        ),
+        "processed_by": admin["username"],
+        "result": result,
+    }
+
+===== DOCUMENT MANAGER =====
+from datetime import datetime, timezone
+from pathlib import Path
+import json
+import os
+import shutil
+from typing import Any
+
+from dotenv import load_dotenv
+from qdrant_client import QdrantClient
+
+
+class DocumentManager:
+    """
+    Central source of truth for prospectus documents.
+
+    Responsibilities:
+    - manage the document registry
+    - resolve the active ready prospectus
+    - derive all storage paths
+    - retain only the newest two prospectus years
+    - remove all generated data for older documents
+    """
+
+    def __init__(self) -> None:
+
+        self.project_root = (
+            Path(__file__).resolve().parents[3]
+        )
+
+        self.storage_dir = (
+            self.project_root / "storage"
+        )
+
+        self.registry_path = (
+            self.storage_dir / "registry.json"
+        )
+
+    def load_registry(self) -> dict[str, Any]:
+
+        if not self.registry_path.exists():
+            return {
+                "active_document_id": None,
+                "documents": [],
+            }
+
+        return json.loads(
+            self.registry_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+    def save_registry(
+        self,
+        registry: dict[str, Any],
+    ) -> None:
+
+        self.storage_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        self.registry_path.write_text(
+            json.dumps(
+                registry,
+                indent=2,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
+    def register_document(
+        self,
+        pdf_path: Path,
+        year: int,
+        official_url: str,
+        status: str = "uploaded",
+    ) -> dict[str, Any]:
+
+        pdf_path = pdf_path.resolve()
+
+        if not pdf_path.exists():
+            raise FileNotFoundError(
+                f"PDF not found: {pdf_path}"
+            )
+
+        if pdf_path.suffix.lower() != ".pdf":
+            raise ValueError(
+                "Only PDF documents can be registered."
+            )
+
+        document_id = pdf_path.stem
+
+        registry = self.load_registry()
+
+        documents = [
+            document
+            for document in registry["documents"]
+            if document["document_id"] != document_id
+        ]
+
+        entry = {
+            "document_id": document_id,
+            "filename": pdf_path.name,
+            "year": year,
+            "official_url": official_url,
+            "status": status,
+            "uploaded_at": (
+                datetime.now(timezone.utc).isoformat()
+            ),
+        }
+
+        documents.append(entry)
+
+        registry["documents"] = documents
+
+        self.save_registry(registry)
+
+        return entry
+
+    def mark_ready(
+        self,
+        document_id: str,
+    ) -> None:
+
+        registry = self.load_registry()
+
+        target = None
+
+        for document in registry["documents"]:
+
+            if (
+                document["document_id"]
+                == document_id
+            ):
+                document["status"] = "ready"
+                target = document
+                break
+
+        if target is None:
+            raise ValueError(
+                f"Unknown document: {document_id}"
+            )
+
+        registry["active_document_id"] = (
+            document_id
+        )
+
+        self.save_registry(registry)
+
+        self.enforce_retention()
+
+    def get_active_document(
+        self,
+    ) -> dict[str, Any]:
+
+        registry = self.load_registry()
+
+        active_id = registry.get(
+            "active_document_id"
+        )
+
+        if not active_id:
+            raise FileNotFoundError(
+                "No active prospectus is configured."
+            )
+
+        for document in registry["documents"]:
+
+            if (
+                document["document_id"]
+                == active_id
+                and document["status"] == "ready"
+            ):
+                return document
+
+        raise FileNotFoundError(
+            "The active prospectus is not ready."
+        )
+
+    def get_active_document_id(self) -> str:
+
+        return self.get_active_document()[
+            "document_id"
+        ]
+
+    def get_upload_path(
+        self,
+        document_id: str,
+    ) -> Path:
+
+        registry = self.load_registry()
+
+        for document in registry["documents"]:
+
+            if (
+                document["document_id"]
+                == document_id
+            ):
+                return (
+                    self.storage_dir
+                    / "uploads"
+                    / document["filename"]
+                )
+
+        raise FileNotFoundError(
+            f"Unknown document: {document_id}"
+        )
+
+    def get_parsed_path(
+        self,
+        document_id: str,
+    ) -> Path:
+
+        return (
+            self.storage_dir
+            / "parsed"
+            / f"{document_id}.json"
+        )
+
+    def get_cleaned_path(
+        self,
+        document_id: str,
+    ) -> Path:
+
+        return (
+            self.storage_dir
+            / "cleaned"
+            / f"{document_id}.json"
+        )
+
+    def get_chunks_path(
+        self,
+        document_id: str,
+    ) -> Path:
+
+        return (
+            self.storage_dir
+            / "chunks"
+            / f"{document_id}.json"
+        )
+
+    def get_tables_path(
+        self,
+        document_id: str,
+    ) -> Path:
+
+        return (
+            self.storage_dir
+            / "tables"
+            / f"{document_id}.json"
+        )
+
+    def get_sections_path(
+        self,
+        document_id: str,
+    ) -> Path:
+
+        return (
+            self.storage_dir
+            / "sections"
+            / f"{document_id}.json"
+        )
+
+    def get_pages_dir(
+        self,
+        document_id: str,
+    ) -> Path:
+
+        return (
+            self.storage_dir
+            / "pages"
+            / document_id
+        )
+
+    def list_documents(
+        self,
+    ) -> list[dict[str, Any]]:
+
+        registry = self.load_registry()
+
+        return sorted(
+            registry["documents"],
+            key=lambda document: (
+                int(document["year"]),
+                document.get("uploaded_at", ""),
+            ),
+            reverse=True,
+        )
+
+
+    def delete_document(
+        self,
+        document_id: str,
+    ) -> None:
+
+        registry = self.load_registry()
+
+        target = None
+
+        for document in registry["documents"]:
+
+            if (
+                document["document_id"]
+                == document_id
+            ):
+                target = document
+                break
+
+        if target is None:
+            raise ValueError(
+                f"Unknown document: {document_id}"
+            )
+
+        self._delete_document_files(
+            target
+        )
+
+        remaining = [
+            document
+            for document in registry["documents"]
+            if (
+                document["document_id"]
+                != document_id
+            )
+        ]
+
+        registry["documents"] = remaining
+
+        if (
+            registry.get("active_document_id")
+            == document_id
+        ):
+
+            ready_documents = [
+                document
+                for document in remaining
+                if document["status"] == "ready"
+            ]
+
+            ready_documents.sort(
+                key=lambda document: (
+                    int(document["year"]),
+                    document.get(
+                        "uploaded_at",
+                        "",
+                    ),
+                ),
+                reverse=True,
+            )
+
+            registry["active_document_id"] = (
+                ready_documents[0]["document_id"]
+                if ready_documents
+                else None
+            )
+
+        self.save_registry(registry)
+
+
+    def enforce_retention(self) -> None:
+        """
+        Keep documents from only the newest two
+        prospectus years currently registered.
+        """
+
+        registry = self.load_registry()
+
+        documents = registry["documents"]
+
+        if not documents:
+            return
+
+        years = sorted(
+            {
+                int(document["year"])
+                for document in documents
+            },
+            reverse=True,
+        )
+
+        keep_years = set(years[:2])
+
+        kept_documents = []
+
+        for document in documents:
+
+            if int(document["year"]) in keep_years:
+                kept_documents.append(document)
+                continue
+
+            self._delete_document_files(
+                document
+            )
+
+        registry["documents"] = kept_documents
+
+        self.save_registry(registry)
+
+    def _delete_document_files(
+        self,
+        document: dict[str, Any],
+    ) -> None:
+
+        document_id = document["document_id"]
+
+        file_paths = [
+            (
+                self.storage_dir
+                / "uploads"
+                / document["filename"]
+            ),
+            self.get_parsed_path(document_id),
+            self.get_cleaned_path(document_id),
+            self.get_chunks_path(document_id),
+            self.get_tables_path(document_id),
+            self.get_sections_path(document_id),
+        ]
+
+        for path in file_paths:
+
+            if path.exists():
+                path.unlink()
+
+        pages_dir = self.get_pages_dir(
+            document_id
+        )
+
+        if pages_dir.exists():
+            shutil.rmtree(pages_dir)
+
+        rescue_dir = (
+            self.storage_dir
+            / "rescue"
+            / document_id
+        )
+
+        if rescue_dir.exists():
+            shutil.rmtree(
+                rescue_dir
+            )
+
+        collection_name = document.get(
+            "collection_name"
+        )
+
+        if collection_name:
+
+            try:
+
+                load_dotenv(
+                    self.project_root
+                    / "backend"
+                    / ".env"
+                )
+
+                qdrant = QdrantClient(
+                    url=os.getenv(
+                        "QDRANT_HOST"
+                    ),
+                    api_key=os.getenv(
+                        "QDRANT_API_KEY"
+                    ),
+                    timeout=180,
+                    check_compatibility=False,
+                )
+
+                if qdrant.collection_exists(
+                    collection_name
+                ):
+
+                    qdrant.delete_collection(
+                        collection_name=(
+                            collection_name
+                        )
+                    )
+
+            except Exception as error:
+
+                print(
+                    "WARNING: Could not delete "
+                    f"Qdrant collection "
+                    f"{collection_name}: {error}"
+                )
+
+===== EXISTING ACTIVE DOCUMENT USAGE =====
+
+  backend\src\api\admin.py:18:
+  backend\src\api\admin.py:19:from src.services.admin_auth_service import (
+  backend\src\api\admin.py:20:    AdminAuthService,
+  backend\src\api\admin.py:21:)
+> backend\src\api\admin.py:22:from src.services.document_manager import (
+  backend\src\api\admin.py:23:    DocumentManager,
+  backend\src\api\admin.py:24:)
+  backend\src\api\admin.py:25:
+  backend\src\api\admin.py:26:
+  backend\src\api\admin.py:27:router = APIRouter()
+  backend\src\api\admin.py:28:
+> backend\src\api\admin.py:29:document_manager = DocumentManager()
+  backend\src\api\admin.py:30:admin_auth_service = AdminAuthService()
+  backend\src\api\admin.py:31:
+  backend\src\api\admin.py:32:security = HTTPBasic()
+  backend\src\api\admin.py:33:
+  backend\src\api\admin.py:34:
+  backend\src\api\admin.py:35:class CreateAdminRequest(BaseModel):
+  backend\src\api\admin.py:36:    username: str
+  backend\src\api\admin.py:37:    password: str
+  backend\src\api\admin.py:38:
+  backend\src\api\admin.py:39:
+  backend\src\api\admin.py:168:        "message": "Admin deleted successfully.",
+  backend\src\api\admin.py:169:    }
+  backend\src\api\admin.py:170:
+  backend\src\api\admin.py:171:
+> backend\src\api\admin.py:172:@router.post("/documents/upload")
+  backend\src\api\admin.py:173:def upload_document(
+  backend\src\api\admin.py:174:    year: int = Form(...),
+  backend\src\api\admin.py:175:    official_url: str = Form(...),
+  backend\src\api\admin.py:176:    file: UploadFile = File(...),
+  backend\src\api\admin.py:177:    admin: dict = Depends(require_admin),
+  backend\src\api\admin.py:178:):
+  backend\src\api\admin.py:179:
+  backend\src\api\admin.py:180:    filename = Path(
+  backend\src\api\admin.py:181:        file.filename or ""
+  backend\src\api\admin.py:182:    ).name
+  backend\src\api\admin.py:212:            ),
+  backend\src\api\admin.py:213:        )
+  backend\src\api\admin.py:214:
+  backend\src\api\admin.py:215:    uploads_dir = (
+> backend\src\api\admin.py:216:        document_manager.storage_dir
+  backend\src\api\admin.py:217:        / "uploads"
+  backend\src\api\admin.py:218:    )
+  backend\src\api\admin.py:219:
+  backend\src\api\admin.py:220:    uploads_dir.mkdir(
+  backend\src\api\admin.py:221:        parents=True,
+  backend\src\api\admin.py:222:        exist_ok=True,
+  backend\src\api\admin.py:223:    )
+  backend\src\api\admin.py:224:
+  backend\src\api\admin.py:225:    pdf_path = uploads_dir / filename
+  backend\src\api\admin.py:226:
+  backend\src\api\admin.py:231:                output,
+  backend\src\api\admin.py:232:            )
+  backend\src\api\admin.py:233:
+  backend\src\api\admin.py:234:        entry = (
+> backend\src\api\admin.py:235:            document_manager.register_document(
+  backend\src\api\admin.py:236:                pdf_path=pdf_path,
+  backend\src\api\admin.py:237:                year=year,
+  backend\src\api\admin.py:238:                official_url=official_url,
+  backend\src\api\admin.py:239:                status="uploaded",
+  backend\src\api\admin.py:240:            )
+  backend\src\api\admin.py:241:        )
+  backend\src\api\admin.py:242:
+  backend\src\api\admin.py:243:        from src.services.document_processing_service import (
+  backend\src\api\admin.py:244:            DocumentProcessingService,
+  backend\src\api\admin.py:245:        )
+  backend\src\api\admin.py:269:        "result": result,
+  backend\src\api\admin.py:270:    }
+  backend\src\api\admin.py:271:
+  backend\src\api\admin.py:272:
+> backend\src\api\admin.py:273:@router.post("/documents/{document_id}/process")
+  backend\src\api\admin.py:274:def process_document(
+  backend\src\api\admin.py:275:    document_id: str,
+  backend\src\api\admin.py:276:    admin: dict = Depends(require_admin),
+  backend\src\api\admin.py:277:):
+  backend\src\api\admin.py:278:
+  backend\src\api\admin.py:279:    from src.services.document_processing_service import (
+  backend\src\api\admin.py:280:        DocumentProcessingService,
+  backend\src\api\admin.py:281:    )
+  backend\src\api\admin.py:282:
+  backend\src\api\admin.py:283:    processor = DocumentProcessingService()
+  backend\src\api\chat.py:6:from fastapi.responses import StreamingResponse
+  backend\src\api\chat.py:7:
+  backend\src\api\chat.py:8:from src.generation.answer_service import RescueAnswerService
+  backend\src\api\chat.py:9:from src.services.chat_history_service import ChatHistoryService
+> backend\src\api\chat.py:10:from src.services.document_manager import DocumentManager
+  backend\src\api\chat.py:11:
+  backend\src\api\chat.py:12:
+  backend\src\api\chat.py:13:router = APIRouter()
+  backend\src\api\chat.py:14:
+> backend\src\api\chat.py:15:document_manager = DocumentManager()
+  backend\src\api\chat.py:16:chat_service = ChatHistoryService()
+  backend\src\api\chat.py:17:
+  backend\src\api\chat.py:18:
+  backend\src\api\chat.py:19:def get_chat_owner_id(
+  backend\src\api\chat.py:20:    x_chat_owner_id: str | None,
+  backend\src\api\chat.py:21:) -> str:
+  backend\src\api\chat.py:22:
+  backend\src\api\chat.py:23:    owner_id = (
+  backend\src\api\chat.py:24:        x_chat_owner_id or ""
+  backend\src\api\chat.py:25:    ).strip()
+  backend\src\api\chat.py:51:
+  backend\src\api\chat.py:52:
+  backend\src\api\chat.py:53:def load_answer_service() -> RescueAnswerService:
+  backend\src\api\chat.py:54:
+> backend\src\api\chat.py:55:    active_document = (
+> backend\src\api\chat.py:56:        document_manager.get_active_document()
+  backend\src\api\chat.py:57:    )
+  backend\src\api\chat.py:58:
+> backend\src\api\chat.py:59:    collection_name = active_document.get(
+  backend\src\api\chat.py:60:        "collection_name"
+  backend\src\api\chat.py:61:    )
+  backend\src\api\chat.py:62:
+  backend\src\api\chat.py:63:    if not collection_name:
+  backend\src\api\chat.py:64:        raise HTTPException(
+  backend\src\api\chat.py:65:            status_code=503,
+  backend\src\api\chat.py:66:            detail=(
+  backend\src\api\chat.py:67:                "Active prospectus has no "
+  backend\src\api\chat.py:68:                "Qdrant collection configured."
+  backend\src\api\chat.py:69:            ),
+  backend\src\api\chat.py:70:        )
+  backend\src\api\chat.py:71:
+  backend\src\api\chat.py:72:    return get_answer_service(
+> backend\src\api\chat.py:73:        active_document["document_id"],
+  backend\src\api\chat.py:74:        collection_name,
+  backend\src\api\chat.py:75:    )
+  backend\src\api\chat.py:76:
+  backend\src\api\chat.py:77:
+  backend\src\api\chat.py:78:@router.get("/chats")
+  backend\src\api\chat.py:79:def list_chats(
+  backend\src\api\chat.py:80:    x_chat_owner_id: str | None = Header(
+  backend\src\api\chat.py:81:        default=None
+  backend\src\api\chat.py:82:    ),
+  backend\src\api\chat.py:83:):
+  backend\src\generation\answer_service.py:9:from src.retrieval.retriever import Retriever
+  backend\src\generation\answer_service.py:10:from src.processing.prospectus.seat_distribution_router import (
+  backend\src\generation\answer_service.py:11:    SeatDistributionRouter,
+  backend\src\generation\answer_service.py:12:)
+> backend\src\generation\answer_service.py:13:from src.services.document_manager import (
+  backend\src\generation\answer_service.py:14:    DocumentManager,
+  backend\src\generation\answer_service.py:15:)
+  backend\src\generation\answer_service.py:16:
+  backend\src\generation\answer_service.py:17:
+  backend\src\generation\answer_service.py:18:PROJECT_ROOT = Path(__file__).resolve().parents[2]
+  backend\src\generation\answer_service.py:19:
+  backend\src\generation\answer_service.py:20:load_dotenv(
+  backend\src\generation\answer_service.py:21:    PROJECT_ROOT / ".env"
+  backend\src\generation\answer_service.py:22:)
+  backend\src\generation\answer_service.py:23:
+  backend\src\generation\answer_service.py:32:        self.retriever = Retriever(
+  backend\src\generation\answer_service.py:33:            collection_name=collection_name,
+  backend\src\generation\answer_service.py:34:        )
+  backend\src\generation\answer_service.py:35:
+> backend\src\generation\answer_service.py:36:        self.document_manager = DocumentManager()
+  backend\src\generation\answer_service.py:37:        self.seat_router = SeatDistributionRouter()
+  backend\src\generation\answer_service.py:38:
+  backend\src\generation\answer_service.py:39:        api_key = os.getenv("LLM_API_KEY")
+  backend\src\generation\answer_service.py:40:
+  backend\src\generation\answer_service.py:41:        if not api_key:
+  backend\src\generation\answer_service.py:42:            raise RuntimeError(
+  backend\src\generation\answer_service.py:43:                "LLM_API_KEY is missing."
+  backend\src\generation\answer_service.py:44:            )
+  backend\src\generation\answer_service.py:45:
+  backend\src\generation\answer_service.py:46:        self.client = Groq(
+  backend\src\generation\answer_service.py:78:
+  backend\src\generation\answer_service.py:79:        if conversational_response is not None:
+  backend\src\generation\answer_service.py:80:            return conversational_response
+  backend\src\generation\answer_service.py:81:
+> backend\src\generation\answer_service.py:82:        active_document = (
+> backend\src\generation\answer_service.py:83:            self.document_manager.get_active_document()
+  backend\src\generation\answer_service.py:84:        )
+  backend\src\generation\answer_service.py:85:
+  backend\src\generation\answer_service.py:86:        sections_path = (
+> backend\src\generation\answer_service.py:87:            self.document_manager.storage_dir
+  backend\src\generation\answer_service.py:88:            / "sections"
+  backend\src\generation\answer_service.py:89:            / (
+> backend\src\generation\answer_service.py:90:                f"{active_document['document_id']}"
+  backend\src\generation\answer_service.py:91:                ".json"
+  backend\src\generation\answer_service.py:92:            )
+  backend\src\generation\answer_service.py:93:        )
+  backend\src\generation\answer_service.py:94:
+  backend\src\generation\answer_service.py:95:        seat_response = self.seat_router.route(
+  backend\src\generation\answer_service.py:96:            question=question,
+> backend\src\generation\answer_service.py:97:            official_url=active_document.get(
+  backend\src\generation\answer_service.py:98:                "official_url"
+  backend\src\generation\answer_service.py:99:            ),
+  backend\src\generation\answer_service.py:100:            sections_path=sections_path,
+  backend\src\generation\answer_service.py:101:        )
+  backend\src\generation\answer_service.py:102:
+  backend\src\generation\answer_service.py:103:        if seat_response is not None:
+  backend\src\generation\answer_service.py:104:            return seat_response
+  backend\src\generation\answer_service.py:105:
+  backend\src\generation\answer_service.py:106:        recent_history = (
+  backend\src\generation\answer_service.py:107:            conversation_history or []
+  backend\src\generation\answer_service.py:272:                "result": conversational_response,
+  backend\src\generation\answer_service.py:273:            }
+  backend\src\generation\answer_service.py:274:            return
+  backend\src\generation\answer_service.py:275:
+> backend\src\generation\answer_service.py:276:        active_document = (
+> backend\src\generation\answer_service.py:277:            self.document_manager.get_active_document()
+  backend\src\generation\answer_service.py:278:        )
+  backend\src\generation\answer_service.py:279:
+  backend\src\generation\answer_service.py:280:        sections_path = (
+> backend\src\generation\answer_service.py:281:            self.document_manager.storage_dir
+  backend\src\generation\answer_service.py:282:            / "sections"
+  backend\src\generation\answer_service.py:283:            / (
+> backend\src\generation\answer_service.py:284:                f"{active_document['document_id']}"
+  backend\src\generation\answer_service.py:285:                ".json"
+  backend\src\generation\answer_service.py:286:            )
+  backend\src\generation\answer_service.py:287:        )
+  backend\src\generation\answer_service.py:288:
+  backend\src\generation\answer_service.py:289:        seat_response = self.seat_router.route(
+  backend\src\generation\answer_service.py:290:            question=question,
+> backend\src\generation\answer_service.py:291:            official_url=active_document.get(
+  backend\src\generation\answer_service.py:292:                "official_url"
+  backend\src\generation\answer_service.py:293:            ),
+  backend\src\generation\answer_service.py:294:            sections_path=sections_path,
+  backend\src\generation\answer_service.py:295:        )
+  backend\src\generation\answer_service.py:296:
+  backend\src\generation\answer_service.py:297:        if seat_response is not None:
+  backend\src\generation\answer_service.py:298:            yield {
+  backend\src\generation\answer_service.py:299:                "type": "done",
+  backend\src\generation\answer_service.py:300:                "result": seat_response,
+  backend\src\generation\answer_service.py:301:            }
+  backend\src\generation\answer_service.py:1538:
+  backend\src\generation\answer_service.py:1539:        official_url = ""
+  backend\src\generation\answer_service.py:1540:
+  backend\src\generation\answer_service.py:1541:        try:
+> backend\src\generation\answer_service.py:1542:            active_document = (
+> backend\src\generation\answer_service.py:1543:                self.document_manager
+> backend\src\generation\answer_service.py:1544:                .get_active_document()
+  backend\src\generation\answer_service.py:1545:            )
+  backend\src\generation\answer_service.py:1546:
+  backend\src\generation\answer_service.py:1547:            official_url = str(
+> backend\src\generation\answer_service.py:1548:                active_document.get(
+  backend\src\generation\answer_service.py:1549:                    "official_url"
+  backend\src\generation\answer_service.py:1550:                )
+  backend\src\generation\answer_service.py:1551:                or ""
+  backend\src\generation\answer_service.py:1552:            ).strip()
+  backend\src\generation\answer_service.py:1553:
+  backend\src\generation\answer_service.py:1554:        except Exception:
+  backend\src\generation\answer_service.py:1555:            official_url = ""
+  backend\src\generation\answer_service.py:1556:
+  backend\src\generation\answer_service.py:1557:        answer = (
+  backend\src\generation\answer_service.py:1558:            "I couldn't reliably find the exact "
+  backend\src\retrieval\curriculum_retriever.py:1:from pathlib import Path
+  backend\src\retrieval\curriculum_retriever.py:2:
+  backend\src\retrieval\curriculum_retriever.py:3:from src.embeddings.embedder import EmbeddingService
+> backend\src\retrieval\curriculum_retriever.py:4:from src.services.document_manager import DocumentManager
+  backend\src\retrieval\curriculum_retriever.py:5:from src.vector_store.qdrant_store import QdrantStore
+  backend\src\retrieval\curriculum_retriever.py:6:
+  backend\src\retrieval\curriculum_retriever.py:7:
+  backend\src\retrieval\curriculum_retriever.py:8:class CurriculumRetriever:
+  backend\src\retrieval\curriculum_retriever.py:9:    """
+  backend\src\retrieval\curriculum_retriever.py:10:    Retrieves structured curriculum records using
+  backend\src\retrieval\curriculum_retriever.py:11:    exact Qdrant payload filters.
+  backend\src\retrieval\curriculum_retriever.py:12:    """
+  backend\src\retrieval\curriculum_retriever.py:13:
+  backend\src\retrieval\curriculum_retriever.py:14:    def __init__(self):
+  backend\src\retrieval\curriculum_retriever.py:26:        semester: str | None = None,
+  backend\src\retrieval\curriculum_retriever.py:27:        course_code: str | None = None,
+  backend\src\retrieval\curriculum_retriever.py:28:        limit: int = 100,
+  backend\src\retrieval\curriculum_retriever.py:29:    ) -> list[dict]:
+> backend\src\retrieval\curriculum_retriever.py:30:        active_document = (
+  backend\src\retrieval\curriculum_retriever.py:31:            DocumentManager()
+> backend\src\retrieval\curriculum_retriever.py:32:            .get_active_document()
+  backend\src\retrieval\curriculum_retriever.py:33:        )
+  backend\src\retrieval\curriculum_retriever.py:34:
+  backend\src\retrieval\curriculum_retriever.py:35:        document_id = Path(
+> backend\src\retrieval\curriculum_retriever.py:36:            active_document["filename"]
+  backend\src\retrieval\curriculum_retriever.py:37:        ).stem
+  backend\src\retrieval\curriculum_retriever.py:38:
+  backend\src\retrieval\curriculum_retriever.py:39:        filters = {
+  backend\src\retrieval\curriculum_retriever.py:40:            "programme_code": programme_code,
+  backend\src\retrieval\curriculum_retriever.py:41:        }
+  backend\src\retrieval\curriculum_retriever.py:42:
+  backend\src\retrieval\curriculum_retriever.py:43:        if study_year is not None:
+  backend\src\retrieval\curriculum_retriever.py:44:            filters["study_year"] = study_year
+  backend\src\retrieval\curriculum_retriever.py:45:
+  backend\src\retrieval\curriculum_retriever.py:46:        if semester is not None:
+  backend\src\services\document_manager.py:38:    def load_registry(self) -> dict[str, Any]:
+  backend\src\services\document_manager.py:39:
+  backend\src\services\document_manager.py:40:        if not self.registry_path.exists():
+  backend\src\services\document_manager.py:41:            return {
+> backend\src\services\document_manager.py:42:                "active_document_id": None,
+  backend\src\services\document_manager.py:43:                "documents": [],
+  backend\src\services\document_manager.py:44:            }
+  backend\src\services\document_manager.py:45:
+  backend\src\services\document_manager.py:46:        return json.loads(
+  backend\src\services\document_manager.py:47:            self.registry_path.read_text(
+  backend\src\services\document_manager.py:48:                encoding="utf-8"
+  backend\src\services\document_manager.py:49:            )
+  backend\src\services\document_manager.py:50:        )
+  backend\src\services\document_manager.py:51:
+  backend\src\services\document_manager.py:52:    def save_registry(
+  backend\src\services\document_manager.py:140:            raise ValueError(
+  backend\src\services\document_manager.py:141:                f"Unknown document: {document_id}"
+  backend\src\services\document_manager.py:142:            )
+  backend\src\services\document_manager.py:143:
+> backend\src\services\document_manager.py:144:        registry["active_document_id"] = (
+  backend\src\services\document_manager.py:145:            document_id
+  backend\src\services\document_manager.py:146:        )
+  backend\src\services\document_manager.py:147:
+  backend\src\services\document_manager.py:148:        self.save_registry(registry)
+  backend\src\services\document_manager.py:149:
+  backend\src\services\document_manager.py:150:        self.enforce_retention()
+  backend\src\services\document_manager.py:151:
+> backend\src\services\document_manager.py:152:    def get_active_document(
+  backend\src\services\document_manager.py:153:        self,
+  backend\src\services\document_manager.py:154:    ) -> dict[str, Any]:
+  backend\src\services\document_manager.py:155:
+  backend\src\services\document_manager.py:156:        registry = self.load_registry()
+  backend\src\services\document_manager.py:157:
+  backend\src\services\document_manager.py:158:        active_id = registry.get(
+> backend\src\services\document_manager.py:159:            "active_document_id"
+  backend\src\services\document_manager.py:160:        )
+  backend\src\services\document_manager.py:161:
+  backend\src\services\document_manager.py:162:        if not active_id:
+  backend\src\services\document_manager.py:163:            raise FileNotFoundError(
+  backend\src\services\document_manager.py:164:                "No active prospectus is configured."
+  backend\src\services\document_manager.py:165:            )
+  backend\src\services\document_manager.py:166:
+  backend\src\services\document_manager.py:167:        for document in registry["documents"]:
+  backend\src\services\document_manager.py:168:
+  backend\src\services\document_manager.py:169:            if (
+  backend\src\services\document_manager.py:176:        raise FileNotFoundError(
+  backend\src\services\document_manager.py:177:            "The active prospectus is not ready."
+  backend\src\services\document_manager.py:178:        )
+  backend\src\services\document_manager.py:179:
+> backend\src\services\document_manager.py:180:    def get_active_document_id(self) -> str:
+  backend\src\services\document_manager.py:181:
+> backend\src\services\document_manager.py:182:        return self.get_active_document()[
+  backend\src\services\document_manager.py:183:            "document_id"
+  backend\src\services\document_manager.py:184:        ]
+  backend\src\services\document_manager.py:185:
+  backend\src\services\document_manager.py:186:    def get_upload_path(
+  backend\src\services\document_manager.py:187:        self,
+  backend\src\services\document_manager.py:188:        document_id: str,
+  backend\src\services\document_manager.py:189:    ) -> Path:
+  backend\src\services\document_manager.py:190:
+  backend\src\services\document_manager.py:191:        registry = self.load_registry()
+  backend\src\services\document_manager.py:192:
+  backend\src\services\document_manager.py:326:
+  backend\src\services\document_manager.py:327:        registry["documents"] = remaining
+  backend\src\services\document_manager.py:328:
+  backend\src\services\document_manager.py:329:        if (
+> backend\src\services\document_manager.py:330:            registry.get("active_document_id")
+  backend\src\services\document_manager.py:331:            == document_id
+  backend\src\services\document_manager.py:332:        ):
+  backend\src\services\document_manager.py:333:
+  backend\src\services\document_manager.py:334:            ready_documents = [
+  backend\src\services\document_manager.py:335:                document
+  backend\src\services\document_manager.py:336:                for document in remaining
+  backend\src\services\document_manager.py:337:                if document["status"] == "ready"
+  backend\src\services\document_manager.py:338:            ]
+  backend\src\services\document_manager.py:339:
+  backend\src\services\document_manager.py:340:            ready_documents.sort(
+  backend\src\services\document_manager.py:347:                ),
+  backend\src\services\document_manager.py:348:                reverse=True,
+  backend\src\services\document_manager.py:349:            )
+  backend\src\services\document_manager.py:350:
+> backend\src\services\document_manager.py:351:            registry["active_document_id"] = (
+  backend\src\services\document_manager.py:352:                ready_documents[0]["document_id"]
+  backend\src\services\document_manager.py:353:                if ready_documents
+  backend\src\services\document_manager.py:354:                else None
+  backend\src\services\document_manager.py:355:            )
+  backend\src\services\document_manager.py:356:
+  backend\src\services\document_manager.py:357:        self.save_registry(registry)
+  backend\src\services\document_manager.py:358:
+  backend\src\services\document_manager.py:359:
+  backend\src\services\document_manager.py:360:    def enforce_retention(self) -> None:
+  backend\src\services\document_manager.py:361:        """
+  backend\src\services\document_processing_service.py:11:    ProspectusSectionDetector,
+  backend\src\services\document_processing_service.py:12:)
+  backend\src\services\document_processing_service.py:13:from src.processing.chunker import DocumentChunker
+  backend\src\services\document_processing_service.py:14:from src.processing.cleaner import DocumentCleaner
+> backend\src\services\document_processing_service.py:15:from src.services.document_manager import DocumentManager
+  backend\src\services\document_processing_service.py:16:from src.services.table_processing_service import (
+  backend\src\services\document_processing_service.py:17:    TableProcessingService,
+  backend\src\services\document_processing_service.py:18:)
+  backend\src\services\document_processing_service.py:19:
+  backend\src\services\document_processing_service.py:20:
+  backend\src\services\document_processing_service.py:21:class DocumentProcessingService:
+  backend\src\services\document_processing_service.py:22:    """
+  backend\src\services\document_processing_service.py:23:    Runs the complete processing pipeline for one
+  backend\src\services\document_processing_service.py:24:    registered prospectus.
+  backend\src\services\document_processing_service.py:25:
+  backend\src\services\document_processing_service.py:27:    pipeline succeeds.
+  backend\src\services\document_processing_service.py:28:    """
+  backend\src\services\document_processing_service.py:29:
+  backend\src\services\document_processing_service.py:30:    def __init__(self) -> None:
+> backend\src\services\document_processing_service.py:31:        self.document_manager = DocumentManager()
+  backend\src\services\document_processing_service.py:32:
+  backend\src\services\document_processing_service.py:33:    def process(
+  backend\src\services\document_processing_service.py:34:        self,
+  backend\src\services\document_processing_service.py:35:        document_id: str,
+  backend\src\services\document_processing_service.py:36:    ) -> dict[str, Any]:
+  backend\src\services\document_processing_service.py:37:
+  backend\src\services\document_processing_service.py:38:        pdf_path = (
+> backend\src\services\document_processing_service.py:39:            self.document_manager.get_upload_path(
+  backend\src\services\document_processing_service.py:40:                document_id
+  backend\src\services\document_processing_service.py:41:            )
+  backend\src\services\document_processing_service.py:42:        )
+  backend\src\services\document_processing_service.py:43:
+  backend\src\services\document_processing_service.py:44:        parsed_path = (
+> backend\src\services\document_processing_service.py:45:            self.document_manager.get_parsed_path(
+  backend\src\services\document_processing_service.py:46:                document_id
+  backend\src\services\document_processing_service.py:47:            )
+  backend\src\services\document_processing_service.py:48:        )
+  backend\src\services\document_processing_service.py:49:
+  backend\src\services\document_processing_service.py:50:        sections_path = (
+> backend\src\services\document_processing_service.py:51:            self.document_manager.get_sections_path(
+  backend\src\services\document_processing_service.py:52:                document_id
+  backend\src\services\document_processing_service.py:53:            )
+  backend\src\services\document_processing_service.py:54:        )
+  backend\src\services\document_processing_service.py:55:
+  backend\src\services\document_processing_service.py:56:        cleaned_path = (
+> backend\src\services\document_processing_service.py:57:            self.document_manager.get_cleaned_path(
+  backend\src\services\document_processing_service.py:58:                document_id
+  backend\src\services\document_processing_service.py:59:            )
+  backend\src\services\document_processing_service.py:60:        )
+  backend\src\services\document_processing_service.py:61:
+  backend\src\services\document_processing_service.py:62:        chunks_path = (
+> backend\src\services\document_processing_service.py:63:            self.document_manager.get_chunks_path(
+  backend\src\services\document_processing_service.py:64:                document_id
+  backend\src\services\document_processing_service.py:65:            )
+  backend\src\services\document_processing_service.py:66:        )
+  backend\src\services\document_processing_service.py:67:
+  backend\src\services\document_processing_service.py:68:        tables_path = (
+> backend\src\services\document_processing_service.py:69:            self.document_manager.get_tables_path(
+  backend\src\services\document_processing_service.py:70:                document_id
+  backend\src\services\document_processing_service.py:71:            )
+  backend\src\services\document_processing_service.py:72:        )
+  backend\src\services\document_processing_service.py:73:
+  backend\src\services\document_processing_service.py:74:        print(
+  backend\src\services\document_processing_service.py:75:            f"\n=== PROCESSING {document_id} ==="
+  backend\src\services\document_processing_service.py:76:        )
+  backend\src\services\document_processing_service.py:77:
+  backend\src\services\document_processing_service.py:78:        loader = DocumentLoader()
+  backend\src\services\document_processing_service.py:79:        classifier = DocumentClassifier()
+  backend\src\services\document_processing_service.py:150:
+  backend\src\services\document_processing_service.py:151:        indexer = Indexer()
+  backend\src\services\document_processing_service.py:152:        indexer.index(chunks_path)
+  backend\src\services\document_processing_service.py:153:
+> backend\src\services\document_processing_service.py:154:        self.document_manager.mark_ready(
+  backend\src\services\document_processing_service.py:155:            document_id
+  backend\src\services\document_processing_service.py:156:        )
+  backend\src\services\document_processing_service.py:157:
+  backend\src\services\document_processing_service.py:158:        print(
+  backend\src\services\document_processing_service.py:159:            f"\n=== {document_id} READY ==="
+  backend\src\services\document_processing_service.py:160:        )
+  backend\src\services\document_processing_service.py:161:
+  backend\src\services\document_processing_service.py:162:        return {
+  backend\src\services\document_processing_service.py:163:            "document_id": document_id,
+  backend\src\services\document_processing_service.py:164:            "document_type": (
+  backend\src\services\rescue_document_processing_service.py:8:from dotenv import load_dotenv
+  backend\src\services\rescue_document_processing_service.py:9:from llama_cloud import LlamaCloud
+  backend\src\services\rescue_document_processing_service.py:10:from qdrant_client import QdrantClient, models
+  backend\src\services\rescue_document_processing_service.py:11:
+> backend\src\services\rescue_document_processing_service.py:12:from src.services.document_manager import 
+DocumentManager
+  backend\src\services\rescue_document_processing_service.py:13:
+  backend\src\services\rescue_document_processing_service.py:14:
+  backend\src\services\rescue_document_processing_service.py:15:PROJECT_ROOT = Path(__file__).resolve().parents[3]
+  backend\src\services\rescue_document_processing_service.py:16:
+  backend\src\services\rescue_document_processing_service.py:17:load_dotenv(
+  backend\src\services\rescue_document_processing_service.py:18:    PROJECT_ROOT / "backend" / ".env"
+  backend\src\services\rescue_document_processing_service.py:19:)
+  backend\src\services\rescue_document_processing_service.py:20:
+  backend\src\services\rescue_document_processing_service.py:21:
+  backend\src\services\rescue_document_processing_service.py:22:class RescueDocumentProcessingService:
+  backend\src\services\rescue_document_processing_service.py:536:                f"{document_id}"
+  backend\src\services\rescue_document_processing_service.py:537:            )
+  backend\src\services\rescue_document_processing_service.py:538:
+  backend\src\services\rescue_document_processing_service.py:539:        registry[
+> backend\src\services\rescue_document_processing_service.py:540:            "active_document_id"
+  backend\src\services\rescue_document_processing_service.py:541:        ] = document_id
+  backend\src\services\rescue_document_processing_service.py:542:
+  backend\src\services\rescue_document_processing_service.py:543:        self.manager.save_registry(
+  backend\src\services\rescue_document_processing_service.py:544:            registry
+  backend\src\services\rescue_document_processing_service.py:545:        )
+  backend\src\services\rescue_document_processing_service.py:546:
+  backend\src\services\rescue_document_processing_service.py:547:        self.manager.enforce_retention()
+  backend\src\main.py:50:    parser = DocumentParser()
+  backend\src\main.py:51:    cleaner = DocumentCleaner()
+  backend\src\main.py:52:    chunker = DocumentChunker()
+  backend\src\main.py:53:
+> backend\src\main.py:54:    from src.services.document_manager import DocumentManager
+  backend\src\main.py:55:
+> backend\src\main.py:56:    document_manager = DocumentManager()
+  backend\src\main.py:57:
+  backend\src\main.py:58:    document_id = (
+> backend\src\main.py:59:        document_manager.get_active_document_id()
+  backend\src\main.py:60:    )
+  backend\src\main.py:61:
+  backend\src\main.py:62:    pdf_path = (
+> backend\src\main.py:63:        document_manager.get_upload_path(
+  backend\src\main.py:64:            document_id
+  backend\src\main.py:65:        )
+  backend\src\main.py:66:    )
+  backend\src\main.py:67:
+  backend\src\main.py:68:    pdf = loader.validate(pdf_path)
+  backend\src\main.py:69:
+  backend\src\main.py:70:    classification = classifier.classify(pdf)
+  backend\src\main.py:71:
+  backend\src\main.py:72:    parsed = parser.parse(
+  backend\src\main.py:73:        pdf,
+
+===== ADMIN LOGIN PAGE =====
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+export function AdminLoginPage() {
+  const {
+    login,
+    isAuthenticated,
+  } = useAuth();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [username, setUsername] =
+    useState("");
+  const [password, setPassword] =
+    useState("");
+  const [error, setError] =
+    useState<string | null>(null);
+  const [loading, setLoading] =
+    useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/admin", {
+        replace: true,
+      });
+    }
+  }, [
+    isAuthenticated,
+    navigate,
+  ]);
+
+  async function handleSubmit(
+    event: FormEvent,
+  ) {
+    event.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const success = await login(
+      username.trim(),
+      password,
+    );
+
+    setLoading(false);
+
+    if (!success) {
+      setError(
+        "Incorrect username or password.",
+      );
+      return;
+    }
+
+    const state = location.state as {
+      from?: {
+        pathname?: string;
+      };
+    } | null;
+
+    navigate(
+      state?.from?.pathname || "/admin",
+      {
+        replace: true,
+      },
+    );
+  }
+
+  return (
+    <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-md flex-col justify-center px-4 py-10 sm:px-6">
+      <div className="rounded-2xl border border-white bg-white/90 p-8 shadow-card">
+        <div className="mb-6 text-center">
+          <h1 className="font-display text-xl font-semibold text-slate-800">
+            Admin sign in
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage prospectus documents and processing
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
+          <div>
+            <label
+              htmlFor="username"
+              className="mb-1 block text-sm font-medium text-slate-600"
+            >
+              Username
+            </label>
+            <input
+              id="username"
+              autoComplete="username"
+              value={username}
+              onChange={(event) =>
+                setUsername(
+                  event.target.value,
+                )
+              }
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-1 block text-sm font-medium text-slate-600"
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) =>
+                setPassword(
+                  event.target.value,
+                )
+              }
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm"
+              required
+            />
+          </div>
+
+          {error && (
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-soft disabled:opacity-60"
+          >
+            {loading
+              ? "Signing in..."
+              : "Sign in"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+===== ADMIN SERVICE =====
+import { API_BASE_URL, ApiError } from "./api";
+
+const SESSION_KEY = "prospectusai_admin_session";
+
+export interface AdminSession {
+  id: string;
+  username: string;
+  password: string;
+}
+
+export interface AdminAccount {
+  id: string;
+  username: string;
+}
+
+export interface AdminListResult {
+  admins: AdminAccount[];
+  current_admin_id: string;
+  maximum_admins: number;
+}
+
+
+export interface UploadResult {
+  message: string;
+  uploaded_by: string;
+  document: Record<string, unknown>;
+  result: Record<string, unknown>;
+}
+
+function authHeader(
+  username: string,
+  password: string,
+): string {
+  return `Basic ${btoa(
+    unescape(
+      encodeURIComponent(
+        `${username}:${password}`,
+      ),
+    ),
+  )}`;
+}
+
+async function errorMessage(
+  response: Response,
+): Promise<string> {
+  try {
+    const body = await response.json();
+    return body.detail || body.message ||
+      `Request failed with status ${response.status}`;
+  } catch {
+    return `Request failed with status ${response.status}`;
+  }
+}
+
+export function getStoredSession():
+  AdminSession | null {
+  const raw = sessionStorage.getItem(
+    SESSION_KEY,
+  );
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as AdminSession;
+  } catch {
+    return null;
+  }
+}
+
+export function storeSession(
+  session: AdminSession,
+): void {
+  sessionStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify(session),
+  );
+}
+
+export function clearSession(): void {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+export async function loginAdmin(
+  username: string,
+  password: string,
+): Promise<AdminSession> {
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/v1/admin/me`,
+      {
+        headers: {
+          Authorization: authHeader(
+            username,
+            password,
+          ),
+        },
+      },
+    );
+  } catch {
+    throw new ApiError(
+      "Could not reach the ProspectusAI server.",
+    );
+  }
+
+  if (!response.ok) {
+    throw new ApiError(
+      await errorMessage(response),
+      response.status,
+    );
+  }
+
+  const admin = await response.json();
+
+  const session: AdminSession = {
+    id: admin.id,
+    username: admin.username,
+    password,
+  };
+
+  storeSession(session);
+
+  return session;
+}
+
+export async function uploadProspectus(
+  file: File,
+  year: number,
+  officialUrl: string,
+  session: AdminSession,
+): Promise<UploadResult> {
+  const formData = new FormData();
+
+  formData.append("file", file);
+  formData.append("year", String(year));
+  formData.append(
+    "official_url",
+    officialUrl,
+  );
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/v1/admin/documents/upload`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: authHeader(
+            session.username,
+            session.password,
+          ),
+        },
+        body: formData,
+      },
+    );
+  } catch {
+    throw new ApiError(
+      "Could not reach the ProspectusAI server.",
+    );
+  }
+
+  if (!response.ok) {
+    throw new ApiError(
+      await errorMessage(response),
+      response.status,
+    );
+  }
+
+  return response.json();
+}
+
+
+export async function listAdmins(
+  session: AdminSession,
+): Promise<AdminListResult> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/admins`,
+    {
+      headers: {
+        Authorization: authHeader(
+          session.username,
+          session.password,
+        ),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError(
+      await errorMessage(response),
+      response.status,
+    );
+  }
+
+  return response.json();
+}
+
+export async function createAdmin(
+  username: string,
+  password: string,
+  session: AdminSession,
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/admins`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader(
+          session.username,
+          session.password,
+        ),
+      },
+      body: JSON.stringify({
+        username,
+        password,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError(
+      await errorMessage(response),
+      response.status,
+    );
+  }
+}
+
+export async function deleteAdmin(
+  adminId: string,
+  session: AdminSession,
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/admins/${encodeURIComponent(
+      adminId,
+    )}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: authHeader(
+          session.username,
+          session.password,
+        ),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError(
+      await errorMessage(response),
+      response.status,
+    );
+  }
+}
+
+===== ACTIVE PROSPECTUS CARD =====
+import type { ProspectusDocument } from "../../types/admin";
+
+interface ActiveProspectusCardProps {
+  document: ProspectusDocument | null;
+  isConnected: boolean;
+}
+
+export function ActiveProspectusCard({
+  document,
+  isConnected,
+}: ActiveProspectusCardProps) {
+  return (
+    <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-card">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-display text-sm font-semibold text-slate-800">
+          Active prospectus
+        </h3>
+        <span className="rounded-full bg-brand-teal/10 px-2.5 py-1 text-[11px] font-medium text-teal-700">
+          {document ? document.stage : "None"}
+        </span>
+      </div>
+
+      {document ? (
+        <div>
+          <p className="font-medium text-slate-700">{document.name}</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Uploaded {new Date(document.uploaded_at).toLocaleDateString()}
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-slate-500">
+          No prospectus has been uploaded yet.
+        </p>
+      )}
+
+      {!isConnected && (
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          This backend feature is not connected yet â€” showing a placeholder
+          state. Connect{" "}
+          <code className="rounded bg-amber-100 px-1 py-0.5">
+            GET /api/v1/admin/documents
+          </code>{" "}
+          to see real data here.
+        </p>
+      )}
+    </div>
+  );
+}
+
+===== ADMIN DASHBOARD =====
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
+import { useAuth } from "../context/AuthContext";
+import { ActiveProspectusCard } from "../components/admin/ActiveProspectusCard";
+import { UploadArea } from "../components/admin/UploadArea";
+import {
+  createAdmin,
+  deleteAdmin,
+  listAdmins,
+  type AdminAccount,
+} from "../services/adminService";
+
+export function AdminDashboardPage() {
+  const { session } = useAuth();
+
+  const activeDocument = null;
+  const documentsConnected = false;
+
+  const [admins, setAdmins] = useState<
+    AdminAccount[]
+  >([]);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loadingAdmins, setLoadingAdmins] =
+    useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<
+    string | null
+  >(null);
+
+  async function refreshAdmins() {
+    if (!session) return;
+
+    try {
+      const result = await listAdmins(session);
+      setAdmins(result.admins);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not load admins.",
+      );
+    } finally {
+      setLoadingAdmins(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshAdmins();
+  }, [session]);
+
+  async function handleCreate(
+    event: FormEvent,
+  ) {
+    event.preventDefault();
+
+    if (!session) return;
+
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      await createAdmin(
+        username.trim(),
+        password,
+        session,
+      );
+
+      setUsername("");
+      setPassword("");
+      setMessage("Admin created successfully.");
+      await refreshAdmins();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not create admin.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(
+    admin: AdminAccount,
+  ) {
+    if (!session) return;
+
+    const confirmed = window.confirm(
+      `Delete admin "${admin.username}"?`,
+    );
+
+    if (!confirmed) return;
+
+    setMessage(null);
+
+    try {
+      await deleteAdmin(admin.id, session);
+      setMessage("Admin deleted successfully.");
+      await refreshAdmins();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not delete admin.",
+      );
+    }
+  }
+
+  const maximumReached = admins.length >= 2;
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <div className="mb-6">
+        <h1 className="font-display text-2xl font-bold text-slate-800">
+          Admin dashboard
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Signed in as{" "}
+          <span className="font-medium text-slate-700">
+            {session?.username}
+          </span>
+        </p>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <ActiveProspectusCard
+          document={activeDocument}
+          isConnected={documentsConnected}
+        />
+
+        <UploadArea />
+
+        <section className="rounded-2xl bg-white p-6 shadow-soft sm:col-span-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-slate-800">
+                Admin accounts
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Maximum 2 administrators.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-brand-purple/10 px-3 py-1 text-sm font-medium text-brand-purple">
+              {admins.length} / 2
+            </span>
+          </div>
+
+          {message && (
+            <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              {message}
+            </div>
+          )}
+
+          <div className="mt-5 space-y-3">
+            {loadingAdmins ? (
+              <p className="text-sm text-slate-500">
+                Loading admins...
+              </p>
+            ) : (
+              admins.map((admin) => (
+                <div
+                  key={admin.id}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3"
+                >
+                  <div>
+                    <p className="font-medium text-slate-800">
+                      {admin.username}
+                    </p>
+                    {admin.id === session?.id && (
+                      <p className="text-xs text-slate-400">
+                        Current account
+                      </p>
+                    )}
+                  </div>
+
+                  {admin.id !== session?.id && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleDelete(admin)
+                      }
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-rose-500 hover:bg-rose-50"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {!maximumReached && (
+            <form
+              onSubmit={handleCreate}
+              className="mt-6 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
+            >
+              <input
+                value={username}
+                onChange={(event) =>
+                  setUsername(event.target.value)
+                }
+                placeholder="New admin username"
+                minLength={3}
+                required
+                className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-purple"
+              />
+
+              <input
+                type="password"
+                value={password}
+                onChange={(event) =>
+                  setPassword(event.target.value)
+                }
+                placeholder="Password (8+ characters)"
+                minLength={8}
+                required
+                className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-purple"
+              />
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl bg-brand-gradient px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {saving ? "Creating..." : "Add admin"}
+              </button>
+            </form>
+          )}
+
+          {maximumReached && (
+            <p className="mt-5 text-sm text-slate-500">
+              The maximum of 2 admins has been reached.
+              Delete the other admin before creating a replacement.
+            </p>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+

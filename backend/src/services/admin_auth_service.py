@@ -72,6 +72,15 @@ class AdminAuthService:
 
         with SessionLocal() as db:
 
+            admin_count = (
+                db.query(AdminUser.id).count()
+            )
+
+            if admin_count >= 2:
+                raise ValueError(
+                    "Maximum of 2 admins allowed."
+                )
+
             existing = (
                 db.query(AdminUser)
                 .filter(
@@ -214,3 +223,78 @@ class AdminAuthService:
                 "id": str(admin.id),
                 "username": admin.username,
             }
+
+
+
+    def list_admins(
+        self,
+    ) -> list[dict]:
+
+        with SessionLocal() as db:
+
+            admins = (
+                db.query(AdminUser)
+                .order_by(AdminUser.username.asc())
+                .all()
+            )
+
+            return [
+                {
+                    "id": str(admin.id),
+                    "username": admin.username,
+                }
+                for admin in admins
+            ]
+
+
+
+    def count_admins(
+        self,
+    ) -> int:
+
+        with SessionLocal() as db:
+            return db.query(
+                AdminUser.id
+            ).count()
+
+
+    def delete_admin(
+        self,
+        admin_id: str,
+    ) -> bool:
+
+        try:
+            parsed_admin_id = uuid.UUID(
+                str(admin_id)
+            )
+
+        except (ValueError, TypeError):
+            return False
+
+        with SessionLocal() as db:
+
+            admin_count = db.query(
+                AdminUser.id
+            ).count()
+
+            if admin_count <= 1:
+                raise ValueError(
+                    "The last admin cannot be deleted."
+                )
+
+            admin = (
+                db.query(AdminUser)
+                .filter(
+                    AdminUser.id
+                    == parsed_admin_id
+                )
+                .first()
+            )
+
+            if admin is None:
+                return False
+
+            db.delete(admin)
+            db.commit()
+
+            return True

@@ -1,0 +1,882 @@
+﻿===== ADMIN API FILES =====
+FILE: C:\Users\syyea\Projects\ProspectusAI\backend\src\api\admin.py
+
+===== ADMIN ROUTE CONTENT =====
+FILE: C:\Users\syyea\Projects\ProspectusAI\backend\src\api\admin.py
+from pathlib import Path
+import shutil
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
+from fastapi.security import (
+    HTTPBasic,
+    HTTPBasicCredentials,
+)
+from pydantic import BaseModel
+
+from src.services.admin_auth_service import (
+    AdminAuthService,
+)
+from src.services.document_manager import (
+    DocumentManager,
+)
+
+
+router = APIRouter()
+
+document_manager = DocumentManager()
+admin_auth_service = AdminAuthService()
+
+security = HTTPBasic()
+
+
+class CreateAdminRequest(BaseModel):
+    username: str
+    password: str
+
+
+def require_admin(
+    credentials: HTTPBasicCredentials = Depends(
+        security
+    ),
+) -> dict:
+
+    admin = admin_auth_service.authenticate(
+        username=credentials.username,
+        password=credentials.password,
+    )
+
+    if admin is None:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_401_UNAUTHORIZED
+            ),
+            detail="Invalid admin credentials.",
+            headers={
+                "WWW-Authenticate": "Basic"
+            },
+        )
+
+    return admin
+
+
+@router.get("/me")
+def get_current_admin(
+    admin: dict = Depends(require_admin),
+):
+    return admin
+
+
+@router.post("/admins")
+def create_admin(
+    request: CreateAdminRequest,
+    current_admin: dict = Depends(
+        require_admin
+    ),
+):
+
+    try:
+        admin = admin_auth_service.create_admin(
+            username=request.username,
+            password=request.password,
+        )
+
+    except ValueError as error:
+        message = str(error)
+
+        status_code = (
+            409
+            if (
+                "Maximum of 2 admins"
+                in message
+                or "already exists"
+                in message
+            )
+            else 400
+        )
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=message,
+        ) from error
+
+    return {
+        "message": "Admin created successfully.",
+        "admin": admin,
+        "created_by": current_admin["username"],
+    }
+
+
+@router.delete("/admins/{admin_id}")
+def delete_admin(
+    admin_id: str,
+    current_admin: dict = Depends(
+        require_admin
+    ),
+):
+
+    if admin_id == current_admin["id"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "You cannot delete your own "
+                "admin account."
+            ),
+        )
+
+    try:
+        deleted = (
+            admin_auth_service.delete_admin(
+                admin_id=admin_id
+            )
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail=str(error),
+        ) from error
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Admin not found.",
+        )
+
+    return {
+        "message": "Admin deleted successfully.",
+    }
+
+
+@router.post("/documents/upload")
+def upload_document(
+    year: int = Form(...),
+    official_url: str = Form(...),
+    file: UploadFile = File(...),
+    admin: dict = Depends(require_admin),
+):
+
+    filename = Path(
+        file.filename or ""
+    ).name
+
+    if not filename:
+        raise HTTPException(
+            status_code=400,
+            detail="A filename is required.",
+        )
+
+    if Path(filename).suffix.lower() != ".pdf":
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are allowed.",
+        )
+
+    if year < 2000 or year > 2100:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid prospectus year.",
+        )
+
+    official_url = official_url.strip()
+
+    if not official_url.startswith(
+        ("https://", "http://")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "A valid official prospectus URL "
+                "is required."
+            ),
+        )
+
+    uploads_dir = (
+        document_manager.storage_dir
+        / "uploads"
+    )
+
+    uploads_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    pdf_path = uploads_dir / filename
+
+    try:
+        with pdf_path.open("wb") as output:
+            shutil.copyfileobj(
+                file.file,
+                output,
+            )
+
+        entry = (
+            document_manager.register_document(
+                pdf_path=pdf_path,
+                year=year,
+                official_url=official_url,
+                status="uploaded",
+            )
+        )
+
+        from src.services.document_processing_service import (
+            DocumentProcessingService,
+        )
+
+        processor = DocumentProcessingService()
+
+        result = processor.process(
+            document_id=entry["document_id"],
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=str(error),
+        ) from error
+
+    finally:
+        file.file.close()
+
+    return {
+        "message": (
+            "Prospectus uploaded and processed "
+            "successfully."
+        ),
+        "uploaded_by": admin["username"],
+        "document": entry,
+        "result": result,
+    }
+
+
+@router.post("/documents/{document_id}/process")
+def process_document(
+    document_id: str,
+    admin: dict = Depends(require_admin),
+):
+
+    from src.services.document_processing_service import (
+        DocumentProcessingService,
+    )
+
+    processor = DocumentProcessingService()
+
+    try:
+        result = processor.process(
+            document_id=document_id,
+        )
+
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        ) from error
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": (
+            "Prospectus processed successfully."
+        ),
+        "processed_by": admin["username"],
+        "result": result,
+    }
+
+===== CHAT HISTORY SERVICE =====
+import uuid
+from datetime import datetime, timezone
+from typing import Any
+
+from sqlalchemy import select
+
+from src.database.database import SessionLocal
+from src.database.models import Chat, Message, User
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+class ChatHistoryService:
+    """
+    Persistent Neon-backed chat history.
+
+    Every operation is scoped to browser_id so one
+    anonymous user cannot access another user's chats.
+    """
+
+    def get_or_create_user(
+        self,
+        browser_id: str,
+    ) -> User:
+
+        with SessionLocal() as session:
+
+            user = session.scalar(
+                select(User).where(
+                    User.browser_id == browser_id
+                )
+            )
+
+            if user is not None:
+                session.expunge(user)
+                return user
+
+            user = User(
+                browser_id=browser_id,
+            )
+
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            session.expunge(user)
+
+            return user
+
+
+    def create_chat(
+        self,
+        browser_id: str,
+        title: str = "New Chat",
+    ) -> dict[str, Any]:
+
+        user = self.get_or_create_user(
+            browser_id
+        )
+
+        with SessionLocal() as session:
+
+            chat = Chat(
+                user_id=user.id,
+                title=title,
+            )
+
+            session.add(chat)
+            session.commit()
+            session.refresh(chat)
+
+            return self._chat_to_dict(chat)
+
+
+    def list_chats(
+        self,
+        browser_id: str,
+    ) -> list[dict[str, Any]]:
+
+        with SessionLocal() as session:
+
+            chats = session.scalars(
+                select(Chat)
+                .join(User)
+                .where(
+                    User.browser_id == browser_id
+                )
+                .order_by(
+                    Chat.updated_at.desc()
+                )
+            ).all()
+
+            return [
+                self._chat_to_dict(chat)
+                for chat in chats
+            ]
+
+
+    def get_chat(
+        self,
+        browser_id: str,
+        chat_id: str,
+    ) -> dict[str, Any] | None:
+
+        chat_uuid = self._to_uuid(chat_id)
+
+        with SessionLocal() as session:
+
+            chat = session.scalar(
+                select(Chat)
+                .join(User)
+                .where(
+                    Chat.id == chat_uuid,
+                    User.browser_id == browser_id,
+                )
+            )
+
+            if chat is None:
+                return None
+
+            return self._chat_to_dict(chat)
+
+
+    def get_messages(
+        self,
+        browser_id: str,
+        chat_id: str,
+    ) -> list[dict[str, Any]]:
+
+        chat_uuid = self._to_uuid(chat_id)
+
+        with SessionLocal() as session:
+
+            owned_chat = session.scalar(
+                select(Chat.id)
+                .join(User)
+                .where(
+                    Chat.id == chat_uuid,
+                    User.browser_id == browser_id,
+                )
+            )
+
+            if owned_chat is None:
+                return []
+
+            messages = session.scalars(
+                select(Message)
+                .where(
+                    Message.chat_id == chat_uuid
+                )
+                .order_by(
+                    Message.created_at.asc()
+                )
+            ).all()
+
+            return [
+                self._message_to_dict(message)
+                for message in messages
+            ]
+
+
+    def add_message(
+        self,
+        browser_id: str,
+        chat_id: str,
+        role: str,
+        content: str,
+        sources: list | None = None,
+        page_references: list | None = None,
+    ) -> dict[str, Any]:
+
+        if role not in {
+            "user",
+            "assistant",
+        }:
+            raise ValueError(
+                "Role must be user or assistant."
+            )
+
+        chat_uuid = self._to_uuid(chat_id)
+
+        with SessionLocal() as session:
+
+            chat = session.scalar(
+                select(Chat)
+                .join(User)
+                .where(
+                    Chat.id == chat_uuid,
+                    User.browser_id == browser_id,
+                )
+            )
+
+            if chat is None:
+                raise PermissionError(
+                    "Chat not found for this user."
+                )
+
+            message = Message(
+                chat_id=chat.id,
+                role=role,
+                content=content,
+                sources=sources or [],
+                page_references=(
+                    page_references or []
+                ),
+            )
+
+            chat.updated_at = utc_now()
+
+            session.add(message)
+            session.commit()
+            session.refresh(message)
+
+            return self._message_to_dict(
+                message
+            )
+
+
+    def update_title(
+        self,
+        browser_id: str,
+        chat_id: str,
+        title: str,
+    ) -> None:
+
+        chat_uuid = self._to_uuid(chat_id)
+
+        clean_title = title.strip()
+
+        if len(clean_title) > 50:
+            clean_title = (
+                clean_title[:50] + "..."
+            )
+
+        with SessionLocal() as session:
+
+            chat = session.scalar(
+                select(Chat)
+                .join(User)
+                .where(
+                    Chat.id == chat_uuid,
+                    User.browser_id == browser_id,
+                )
+            )
+
+            if chat is None:
+                raise PermissionError(
+                    "Chat not found for this user."
+                )
+
+            chat.title = (
+                clean_title or "New Chat"
+            )
+
+            chat.updated_at = utc_now()
+
+            session.commit()
+
+
+    def delete_chat(
+        self,
+        browser_id: str,
+        chat_id: str,
+    ) -> bool:
+
+        chat_uuid = self._to_uuid(chat_id)
+
+        with SessionLocal() as session:
+
+            chat = session.scalar(
+                select(Chat)
+                .join(User)
+                .where(
+                    Chat.id == chat_uuid,
+                    User.browser_id == browser_id,
+                )
+            )
+
+            if chat is None:
+                return False
+
+            session.delete(chat)
+            session.commit()
+
+            return True
+
+
+    @staticmethod
+    def _to_uuid(value: str) -> uuid.UUID:
+
+        try:
+            return uuid.UUID(str(value))
+        except ValueError as error:
+            raise ValueError(
+                "Invalid chat ID."
+            ) from error
+
+
+    @staticmethod
+    def _chat_to_dict(
+        chat: Chat,
+    ) -> dict[str, Any]:
+
+        return {
+            "id": str(chat.id),
+            "title": chat.title,
+            "created_at": (
+                chat.created_at.isoformat()
+            ),
+            "updated_at": (
+                chat.updated_at.isoformat()
+            ),
+        }
+
+
+    @staticmethod
+    def _message_to_dict(
+        message: Message,
+    ) -> dict[str, Any]:
+
+        return {
+            "id": str(message.id),
+            "role": message.role,
+            "content": message.content,
+            "sources": message.sources or [],
+            "page_references": (
+                message.page_references or []
+            ),
+            "created_at": (
+                message.created_at.isoformat()
+            ),
+        }
+
+===== ADMIN SERVICE FRONTEND =====
+import { API_BASE_URL, ApiError } from "./api";
+
+const SESSION_KEY = "prospectusai_admin_session";
+
+export interface AdminSession {
+  id: string;
+  username: string;
+  password: string;
+}
+
+export interface UploadResult {
+  message: string;
+  uploaded_by: string;
+  document: Record<string, unknown>;
+  result: Record<string, unknown>;
+}
+
+function authHeader(
+  username: string,
+  password: string,
+): string {
+  return `Basic ${btoa(
+    unescape(
+      encodeURIComponent(
+        `${username}:${password}`,
+      ),
+    ),
+  )}`;
+}
+
+async function errorMessage(
+  response: Response,
+): Promise<string> {
+  try {
+    const body = await response.json();
+    return body.detail || body.message ||
+      `Request failed with status ${response.status}`;
+  } catch {
+    return `Request failed with status ${response.status}`;
+  }
+}
+
+export function getStoredSession():
+  AdminSession | null {
+  const raw = sessionStorage.getItem(
+    SESSION_KEY,
+  );
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as AdminSession;
+  } catch {
+    return null;
+  }
+}
+
+export function storeSession(
+  session: AdminSession,
+): void {
+  sessionStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify(session),
+  );
+}
+
+export function clearSession(): void {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+export async function loginAdmin(
+  username: string,
+  password: string,
+): Promise<AdminSession> {
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/v1/admin/me`,
+      {
+        headers: {
+          Authorization: authHeader(
+            username,
+            password,
+          ),
+        },
+      },
+    );
+  } catch {
+    throw new ApiError(
+      "Could not reach the ProspectusAI server.",
+    );
+  }
+
+  if (!response.ok) {
+    throw new ApiError(
+      await errorMessage(response),
+      response.status,
+    );
+  }
+
+  const admin = await response.json();
+
+  const session: AdminSession = {
+    id: admin.id,
+    username: admin.username,
+    password,
+  };
+
+  storeSession(session);
+
+  return session;
+}
+
+export async function uploadProspectus(
+  file: File,
+  year: number,
+  officialUrl: string,
+  session: AdminSession,
+): Promise<UploadResult> {
+  const formData = new FormData();
+
+  formData.append("file", file);
+  formData.append("year", String(year));
+  formData.append(
+    "official_url",
+    officialUrl,
+  );
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/v1/admin/documents/upload`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: authHeader(
+            session.username,
+            session.password,
+          ),
+        },
+        body: formData,
+      },
+    );
+  } catch {
+    throw new ApiError(
+      "Could not reach the ProspectusAI server.",
+    );
+  }
+
+  if (!response.ok) {
+    throw new ApiError(
+      await errorMessage(response),
+      response.status,
+    );
+  }
+
+  return response.json();
+}
+
+===== AUTH CONTEXT =====
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  clearSession,
+  getStoredSession,
+  loginAdmin,
+  type AdminSession,
+} from "../services/adminService";
+
+interface AuthContextValue {
+  session: AdminSession | null;
+  isAuthenticated: boolean;
+  login: (
+    username: string,
+    password: string,
+  ) => Promise<boolean>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<
+  AuthContextValue | undefined
+>(undefined);
+
+export function AuthProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [session, setSession] =
+    useState<AdminSession | null>(
+      () => getStoredSession(),
+    );
+
+  const login = useCallback(
+    async (
+      username: string,
+      password: string,
+    ) => {
+      try {
+        const authenticated =
+          await loginAdmin(
+            username,
+            password,
+          );
+
+        setSession(authenticated);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
+
+  const logout = useCallback(() => {
+    clearSession();
+    setSession(null);
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        session,
+        isAuthenticated: !!session,
+        login,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error(
+      "useAuth must be used within an AuthProvider",
+    );
+  }
+
+  return context;
+}

@@ -1,0 +1,162 @@
+﻿===== FRONTEND FILES =====
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\App.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\index.css
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\main.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\vite-env.d.ts
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\ActiveProspectusCard.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\ProcessingStages.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\SummaryCards.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\chat\ChatInput.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\chat\ChatSidebar.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\chat\ChatWindow.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\chat\ExampleChips.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\chat\MessageBubble.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\chat\PageReviewCard.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\chat\SourcesList.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\ProtectedRoute.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\ChatPage.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\NotFoundPage.tsx
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\api.ts
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\chatService.ts
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\types\admin.ts
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\types\chat.ts
+
+===== ADMIN REFERENCES =====
+
+Path                                                                                        LineNumber Line                                                 
+----                                                                                        ---------- ----                                                 
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\ActiveProspectusCard.tsx          1 import type { ProspectusDocument } from "../../typ...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\ActiveProspectusCard.tsx         27             Uploaded {new Date(document.uploaded_a...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\ActiveProspectusCard.tsx         32           No prospectus has been uploaded yet.       
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\ActiveProspectusCard.tsx         41             GET /api/v1/admin/documents              
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\ProcessingStages.tsx              1 import { PROCESSING_STAGES, type ProcessingStage }...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\SummaryCards.tsx                  1 import type { ProcessingSummary } from "../../type...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\SummaryCards.tsx                 49             GET /api/v1/admin/processing-status/&#...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                    2 import { uploadProspectus } from "../../services/a...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                    4 type UploadState = "idle" | "uploading" | "not_con...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                    6 export function UploadArea() {                       
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                    9   const [state, setState] = useState<UploadState>(...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   16       setMessage("Please upload a PDF file.");       
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   21     setState("uploading");                           
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   24     const result = await uploadProspectus(file);     
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   28       setMessage("Upload received.");                
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   32         "This backend feature is not connected yet...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   36       setMessage(result.error || "Upload failed. P...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   50         Upload prospectus                            
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   89           {state === "uploading" && (                
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\admin\UploadArea.tsx                   91               Uploading…                             
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx                       9   const isAdminArea = location.pathname.startsWith...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx                      13     navigate("/admin/login");                        
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx                      32               !isAdminArea                           
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx                      43                 to="/admin"                          
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx                      45                   isAdminArea                        
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx                      61               to="/admin/login"                      
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx                      63                 isAdminArea                          
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\Navbar.tsx                      68               Admin                                  
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\components\layout\ProtectedRoute.tsx              10     return <Navigate to="/admin/login" state={{ fr...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           11   mockLogin,                                         
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           12   type AdminSession,                                 
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           13 } from "../services/adminService";                   
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           16   session: AdminSession | null;                      
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           18   login: (username: string, password: string) => b...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           25   const [session, setSession] = useState<AdminSess...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           29   const login = useCallback((username: string, pas...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           30     const result = mockLogin(username, password);    
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\context\AuthContext.tsx                           45       value={{ session, isAuthenticated: !!session...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                       3 import { fetchDocuments } from "../services/adminS...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                       4 import type { ProspectusDocument } from "../types/...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                       5 import { ActiveProspectusCard } from "../component...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                       6 import { UploadArea } from "../components/admin/Up...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                       7 import { ProcessingStages } from "../components/ad...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                       8 import { SummaryCards } from "../components/admin/...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                      10 export function AdminDashboardPage() {               
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                      41             Admin dashboard                          
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminDashboardPage.tsx                      70           <UploadArea />                             
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                           5 export function AdminLoginPage() {                   
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                           6   const { login, isAuthenticated } = useAuth();      
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                          14     navigate("/admin", { replace: true });           
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                          20     const success = login(username.trim(), password);
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                          23       const redirectTo = state?.from?.pathname || ...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                          38             Admin sign in                            
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                          60               placeholder="admin"                    
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                          99           <p className="font-semibold">Development...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                         101             The real admin backend isn't connected...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\pages\AdminLoginPage.tsx                         102             <code className="rounded bg-amber-100 ...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                           3   AdminLoginResponse,                                
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                           7 } from "../types/admin";                             
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          12  * The real admin backend (POST /api/v1/admin/logi...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          16  * /api/v1/admin/login endpoint exists (see loginA...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          19 const MOCK_ADMIN_USERNAME = "admin";                 
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          20 const MOCK_ADMIN_PASSWORD = "prospectus-dev-only";   
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          21 const SESSION_KEY = "prospectusai_admin_session";    
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          23 export interface AdminSession {                      
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          29 export function mockLogin(                           
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          32 ): AdminSession | null {                             
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          33   if (username === MOCK_ADMIN_USERNAME && password...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          34     const session: AdminSession = {                  
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          45 export function getStoredSession(): AdminSession |...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          49     return JSON.parse(raw) as AdminSession;          
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          89 /** POST /api/v1/admin/login (not built yet — safe...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          90 export async function loginAdmin(                    
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          93 ): Promise<BackendCallResult<AdminLoginResponse>> {  
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                          95     apiRequest<AdminLoginResponse>("/api/v1/admin/...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                         102 /** POST /api/v1/admin/upload (not built yet — saf...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                         103 export async function uploadProspectus(              
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                         110       `${import.meta.env.VITE_API_BASE_URL}/api/v1...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                         114       throw new ApiError(`Upload failed with statu...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                         120 /** GET /api/v1/admin/documents (not built yet — s...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                         125     apiRequest<ProspectusDocument[]>("/api/v1/admi...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                         129 /** GET /api/v1/admin/processing-status/{document_...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\services\adminService.ts                         135       `/api/v1/admin/processing-status/${encodeURI...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\types\admin.ts                                     1 // Types for the (currently mocked / not-yet-built...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\types\admin.ts                                     5 export interface AdminLoginRequest {                 
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\types\admin.ts                                    10 export interface AdminLoginResponse {                
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\types\admin.ts                                    16   | "Uploaded"                                       
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\types\admin.ts                                    25   "Uploaded",                                        
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\types\admin.ts                                    44   uploaded_at: string;                               
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\App.tsx                                            5 import { AdminLoginPage } from "./pages/AdminLogin...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\App.tsx                                            6 import { AdminDashboardPage } from "./pages/AdminD...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\App.tsx                                           16         <Route path="/admin/login" element={<Admin...
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\App.tsx                                           18           path="/admin"                              
+C:\Users\syyea\Projects\ProspectusAI\frontend\src\App.tsx                                           21               <AdminDashboardPage />                 
+
+===== APP ROUTING =====
+import { Navigate, Route, Routes } from "react-router-dom";
+import { Navbar } from "./components/layout/Navbar";
+import { ProtectedRoute } from "./components/layout/ProtectedRoute";
+import { ChatPage } from "./pages/ChatPage";
+import { AdminLoginPage } from "./pages/AdminLoginPage";
+import { AdminDashboardPage } from "./pages/AdminDashboardPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+
+function App() {
+  return (
+    <div className="min-h-screen">
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Navigate to="/chat" replace />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </div>
+  );
+}
+
+export default App;
+
+

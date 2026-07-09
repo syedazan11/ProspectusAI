@@ -1,13 +1,16 @@
 import json
+import re
 from typing import Any
 
-from src.graph.graph_builder import GraphBuilder
 from src.indexing.indexer import Indexer
 from src.ingestion.document_classifier import (
     DocumentClassifier,
 )
 from src.ingestion.loader import DocumentLoader
 from src.ingestion.parser import DocumentParser
+from src.processing.prospectus.section_detector import (
+    ProspectusSectionDetector,
+)
 from src.processing.chunker import DocumentChunker
 from src.processing.cleaner import DocumentCleaner
 from src.services.document_manager import DocumentManager
@@ -45,6 +48,12 @@ class DocumentProcessingService:
             )
         )
 
+        sections_path = (
+            self.document_manager.get_sections_path(
+                document_id
+            )
+        )
+
         cleaned_path = (
             self.document_manager.get_cleaned_path(
                 document_id
@@ -63,102 +72,149 @@ class DocumentProcessingService:
             )
         )
 
-        graph_path = (
-            self.document_manager.get_graph_path(
-                document_id
+        collection_suffix = re.sub(
+            r"[^a-zA-Z0-9_-]+",
+            "_",
+            document_id,
+        ).strip("_").lower()
+
+        if not collection_suffix:
+            raise ValueError(
+                "Document ID cannot produce a valid "
+                "Qdrant collection name."
             )
+
+        collection_name = (
+            f"prospectus_{collection_suffix}"
+        )
+
+        self.document_manager.update_document(
+            document_id,
+            status="processing",
         )
 
         print(
             f"\n=== PROCESSING {document_id} ==="
         )
 
-        loader = DocumentLoader()
-        classifier = DocumentClassifier()
-        parser = DocumentParser()
-        cleaner = DocumentCleaner()
-        chunker = DocumentChunker()
+        try:
+            loader = DocumentLoader()
+            classifier = DocumentClassifier()
+            parser = DocumentParser()
+            cleaner = DocumentCleaner()
+            chunker = DocumentChunker()
 
-        pdf = loader.validate(pdf_path)
+            pdf = loader.validate(pdf_path)
 
-        classification = classifier.classify(pdf)
+            classification = classifier.classify(pdf)
 
-        parser.parse(
-            pdf,
-            classification["document_type"],
-        )
-
-        if not parsed_path.exists():
-            raise FileNotFoundError(
-                f"Parsed output not found: {parsed_path}"
+            parser.parse(
+                pdf,
+                classification["document_type"],
             )
 
-        cleaner.clean(parsed_path)
+            if not parsed_path.exists():
+                raise FileNotFoundError(
+                    f"Parsed output not found: {parsed_path}"
+                )
 
-        if not cleaned_path.exists():
-            raise FileNotFoundError(
-                f"Cleaned output not found: {cleaned_path}"
+            parsed_data = json.loads(
+                parsed_path.read_text(
+                    encoding="utf-8-sig"
+                )
             )
 
-        chunks = chunker.chunk(cleaned_path)
-
-        if not chunks_path.exists():
-            raise FileNotFoundError(
-                f"Chunks output not found: {chunks_path}"
+            sections = (
+                ProspectusSectionDetector().detect(
+                    parsed_data.get("pages", [])
+                )
             )
 
-        table_service = TableProcessingService()
+            sections_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
 
-        table_result = table_service.process(
-            parsed_path=parsed_path,
-            output_path=tables_path,
-        )
+            sections_path.write_text(
+                json.dumps(
+                    {
+                        "document_id": document_id,
+                        "sections": [
+                            section.to_dict()
+                            for section in sections
+                        ],
+                    },
+                    indent=4,
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
 
-        indexer = Indexer()
-        indexer.index(chunks_path)
+            cleaner.clean(parsed_path)
 
-        parent_chunks = chunks.get(
-            "parent_chunks",
-            [],
-        )
+            if not cleaned_path.exists():
+                raise FileNotFoundError(
+                    f"Cleaned output not found: {cleaned_path}"
+                )
 
-        graph_builder = GraphBuilder()
+            chunks = chunker.chunk(cleaned_path)
 
-        graph = graph_builder.build(
-            chunks=parent_chunks,
-            checkpoint_path=graph_path,
-        )
+            if not chunks_path.exists():
+                raise FileNotFoundError(
+                    f"Chunks output not found: {chunks_path}"
+                )
 
-        graph_builder.save(
-            graph=graph,
-            output_path=graph_path,
-        )
+            table_service = TableProcessingService()
 
-        self.document_manager.mark_ready(
-            document_id
-        )
+            table_result = table_service.process(
+                parsed_path=parsed_path,
+                output_path=tables_path,
+            )
 
-        print(
-            f"\n=== {document_id} READY ==="
-        )
+            indexer = Indexer(
+                collection_name=collection_name,
+            )
 
-        return {
-            "document_id": document_id,
-            "document_type": (
-                classification["document_type"]
-            ),
-            "parent_chunks": len(parent_chunks),
-            "child_chunks": len(
-                chunks.get("child_chunks", [])
-            ),
-            "table_pages": len(
-                table_result.get("pages", [])
-            ),
-            "graph_entities": len(
-                graph.get("entities", [])
-            ),
-            "graph_relationships": len(
-                graph.get("relationships", [])
-            ),
-            "status": "ready",
-        }
+            indexer.index(
+                chunks_json=chunks_path,
+                document_id=document_id,
+            )
+
+            self.document_manager.update_document(
+                document_id,
+                collection_name=collection_name,
+            )
+
+            self.document_manager.mark_ready(
+                document_id
+            )
+
+            print(
+                f"\n=== {document_id} READY ==="
+            )
+
+            return {
+                "document_id": document_id,
+                "document_type": (
+                    classification["document_type"]
+                ),
+                "parent_chunks": len(
+                    chunks.get("parent_chunks", [])
+                ),
+                "child_chunks": len(
+                    chunks.get("child_chunks", [])
+                ),
+                "table_pages": len(
+                    table_result.get("pages", [])
+                ),
+                "collection_name": collection_name,
+                "status": "ready",
+            }
+
+        except Exception:
+            self.document_manager.update_document(
+                document_id,
+                status="failed",
+            )
+
+            raise

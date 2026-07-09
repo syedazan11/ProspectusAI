@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import uuid
+
 from qdrant_client.models import PointStruct
 
 from src.embeddings.embedder import EmbeddingService
@@ -9,76 +10,116 @@ from src.vector_store.qdrant_store import QdrantStore
 
 class Indexer:
     """
-    Reads child chunks, generates embeddings,
-    and indexes them into Qdrant.
+    Reads current child chunks, generates embeddings,
+    and indexes them into a target Qdrant collection.
     """
-    BATCH_SIZE = 128
 
-    def __init__(self):
+    BATCH_SIZE = 32
 
+    def __init__(
+        self,
+        collection_name: str | None = None,
+    ):
         self.embedder = EmbeddingService()
-        self.vector_store = QdrantStore()
-    
-    def index(self, chunks_json: Path):
-
-        with open(chunks_json, "r", encoding="utf-8") as f:
-            document = json.load(f)
-
-        child_chunks = document["child_chunks"]
-
-        print(f"Found {len(child_chunks)} child chunks.")
-
-        if not child_chunks:
-            print("No child chunks to index.")
-            return
-
-        document_id = (
-            child_chunks[0]["metadata"]["document"]
+        self.vector_store = QdrantStore(
+            vector_size=self.embedder.vector_size,
+            collection_name=collection_name,
         )
+
+    def index(
+        self,
+        chunks_json: Path,
+        document_id: str,
+    ) -> None:
+        with open(
+            chunks_json,
+            "r",
+            encoding="utf-8",
+        ) as file:
+            document = json.load(file)
+
+        chunks = document["child_chunks"]
+
+        print(
+            f"Found {len(chunks)} child chunks."
+        )
+
+        if not chunks:
+            raise ValueError(
+                "No child chunks available to index."
+            )
 
         self.vector_store.create_collection()
 
         self.vector_store.delete_document(
             document_id=document_id,
+            content_type="prospectus_chunk",
         )
 
-        for start in range(0, len(child_chunks), self.BATCH_SIZE):
+        for start in range(
+            0,
+            len(chunks),
+            self.BATCH_SIZE,
+        ):
+            batch = chunks[
+                start:start + self.BATCH_SIZE
+            ]
 
-            batch = child_chunks[start:start + self.BATCH_SIZE]
-
-            # Extract text
             texts = [
                 chunk["content"]
                 for chunk in batch
             ]
 
-            # Generate embeddings
-            embeddings = self.embedder.embed_batch(texts)
+            embeddings = (
+                self.embedder.embed_documents(texts)
+            )
 
             points = []
 
-            for chunk, vector in zip(batch, embeddings):
-
+            for chunk, vector in zip(
+                batch,
+                embeddings,
+            ):
                 points.append(
                     PointStruct(
                         id=str(uuid.uuid4()),
                         vector=vector.tolist(),
                         payload={
-                            "document": chunk["metadata"]["document"],
-                            "page_number": chunk["page_number"],
-                            "heading": chunk["heading"],
-                            "chunk_id": chunk["chunk_id"],
-                            "parent_chunk_id": chunk["parent_chunk_id"],
-                            "content": chunk["content"],
+                            "document": document_id,
+                            "content_type": (
+                                "prospectus_chunk"
+                            ),
+                            "page_number": (
+                                chunk["page_number"]
+                            ),
+                            "heading": (
+                                chunk.get("heading")
+                            ),
+                            "chunk_id": (
+                                chunk["chunk_id"]
+                            ),
+                            "parent_chunk_id": (
+                                chunk.get(
+                                    "parent_chunk_id"
+                                )
+                            ),
+                            "content": (
+                                chunk["content"]
+                            ),
                         },
                     )
                 )
 
-            self.vector_store.upsert_points(points)
-
-            print(
-                f"Indexed {start + len(batch)} / {len(child_chunks)} chunks."
+            self.vector_store.upsert_points(
+                points
             )
 
-        print("\n✅ Indexing completed successfully!")
-    
+            print(
+                "Indexed "
+                f"{start + len(batch)} / "
+                f"{len(chunks)} chunks."
+            )
+
+        print(
+            "\nIndexing completed successfully!"
+        )

@@ -1,0 +1,260 @@
+import re
+from dataclasses import asdict, dataclass
+
+from bs4 import BeautifulSoup
+
+
+@dataclass(slots=True)
+class CurriculumRecord:
+    programme: str
+    study_year: str
+    semester: str
+    course_code: str
+    course_title: str
+    theory_hours: str
+    practical_hours: str
+    total_credit_hours: str
+    source_page: int
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+class CurriculumRecordExtractor:
+    PROGRAMME_PATTERN = re.compile(
+        r"^\d+\.\d+\.\d+\s+(.+)$"
+    )
+
+    STUDY_YEARS = {
+        "FIRST YEAR",
+        "SECOND YEAR",
+        "THIRD YEAR",
+        "FINAL YEAR",
+    }
+
+    def extract(
+        self,
+        markdown_pages: list[dict],
+        *,
+        first_source_page: int = 38,
+    ) -> list[CurriculumRecord]:
+        records: list[CurriculumRecord] = []
+
+        current_programme: str | None = None
+
+        for page_index, page in enumerate(
+            markdown_pages
+        ):
+            markdown = page.get("markdown", "")
+
+            if not markdown:
+                continue
+
+            source_page = (
+                first_source_page + page_index
+            )
+
+            programme = self._find_programme(
+                markdown
+            )
+
+            if programme:
+                current_programme = programme
+
+            if not current_programme:
+                continue
+
+            soup = BeautifulSoup(
+                markdown,
+                "lxml",
+            )
+
+            current_study_year: str | None = None
+
+            for table in soup.find_all("table"):
+                detected_study_year = self._find_study_year(
+                    table
+                )
+
+                if detected_study_year:
+                    current_study_year = detected_study_year
+
+                if not current_study_year:
+                    continue
+
+                study_year = current_study_year
+                rows = table.find_all("tr")
+
+                for row in rows:
+                    cells = [
+                        cell.get_text(
+                            " ",
+                            strip=True,
+                        )
+                        for cell in row.find_all(
+                            ["td", "th"]
+                        )
+                    ]
+
+                    if len(cells) == 10:
+                        self._append_semester_record(
+                            records=records,
+                            programme=current_programme,
+                            study_year=study_year,
+                            semester="Fall",
+                            cells=cells[0:5],
+                            source_page=source_page,
+                        )
+
+                        self._append_semester_record(
+                            records=records,
+                            programme=current_programme,
+                            study_year=study_year,
+                            semester="Spring",
+                            cells=cells[5:10],
+                            source_page=source_page,
+                        )
+
+                        continue
+
+                    if len(cells) == 5:
+                        semester = self._find_semester(
+                            table
+                        )
+
+                        if semester:
+                            self._append_semester_record(
+                                records=records,
+                                programme=current_programme,
+                                study_year=study_year,
+                                semester=semester,
+                                cells=cells,
+                                source_page=source_page,
+                            )
+
+        return records
+
+    def _append_semester_record(
+        self,
+        *,
+        records: list[CurriculumRecord],
+        programme: str,
+        study_year: str,
+        semester: str,
+        cells: list[str],
+        source_page: int,
+    ) -> None:
+        code, title, theory, practical, total = (
+            cells
+        )
+
+        code = self._clean(code)
+        title = self._clean(title)
+
+        if not code or not title:
+            return
+
+        if code.lower() == "course code":
+            return
+
+        if not self._looks_like_course_code(code):
+            return
+
+        records.append(
+            CurriculumRecord(
+                programme=programme,
+                study_year=study_year,
+                semester=semester,
+                course_code=code,
+                course_title=title,
+                theory_hours=self._clean(theory),
+                practical_hours=self._clean(
+                    practical
+                ),
+                total_credit_hours=self._clean(
+                    total
+                ),
+                source_page=source_page,
+            )
+        )
+
+    def _find_programme(
+        self,
+        markdown: str,
+    ) -> str | None:
+        for line in markdown.splitlines():
+            text = re.sub(
+                r"^#{1,6}\s*",
+                "",
+                line.strip(),
+            )
+
+            match = self.PROGRAMME_PATTERN.match(
+                text
+            )
+
+            if match:
+                return self._clean(
+                    match.group(1)
+                )
+
+        return None
+
+    @staticmethod
+    def _find_semester(table) -> str | None:
+        text = table.get_text(
+            " ",
+            strip=True,
+        ).lower()
+
+        has_fall = "fall semester" in text
+        has_spring = "spring semester" in text
+
+        if has_fall and not has_spring:
+            return "Fall"
+
+        if has_spring and not has_fall:
+            return "Spring"
+
+        return None
+
+    def _find_study_year(
+        self,
+        table,
+    ) -> str | None:
+        text = table.get_text(
+            " ",
+            strip=True,
+        ).upper()
+
+        for study_year in self.STUDY_YEARS:
+            if study_year in text:
+                return study_year
+
+        return None
+
+    @staticmethod
+    def _looks_like_course_code(
+        code: str,
+    ) -> bool:
+        return bool(
+            re.fullmatch(
+                r"[A-Z]{2,5}"
+                r"(?:/[A-Z]{2,5})?"
+                r"[- ]"
+                r"(?:\d{2,4}|#{3})"
+                r"(?:\s*/\s*"
+                r"[A-Z]{2,5}"
+                r"[- ]?"
+                r"(?:\d{2,4}|#{3}))?",
+                code,
+            )
+        )
+
+    @staticmethod
+    def _clean(text: str) -> str:
+        return re.sub(
+            r"\s+",
+            " ",
+            text,
+        ).strip()

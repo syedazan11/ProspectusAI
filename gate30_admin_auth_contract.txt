@@ -1,0 +1,431 @@
+﻿===== ADMIN API TOP =====
+   1: from pathlib import Path
+   2: import shutil
+   3: 
+   4: from fastapi import (
+   5:     APIRouter,
+   6:     Depends,
+   7:     File,
+   8:     Form,
+   9:     HTTPException,
+  10:     UploadFile,
+  11:     status,
+  12: )
+  13: from fastapi.security import (
+  14:     HTTPBasic,
+  15:     HTTPBasicCredentials,
+  16: )
+  17: from pydantic import BaseModel
+  18: 
+  19: from src.services.admin_auth_service import (
+  20:     AdminAuthService,
+  21: )
+  22: from src.services.document_manager import (
+  23:     DocumentManager,
+  24: )
+  25: 
+  26: 
+  27: router = APIRouter()
+  28: 
+  29: document_manager = DocumentManager()
+  30: admin_auth_service = AdminAuthService()
+  31: 
+  32: security = HTTPBasic()
+  33: 
+  34: 
+  35: class CreateAdminRequest(BaseModel):
+  36:     username: str
+  37:     password: str
+  38: 
+  39: 
+  40: def require_admin(
+  41:     credentials: HTTPBasicCredentials = Depends(
+  42:         security
+  43:     ),
+  44: ) -> dict:
+  45: 
+  46:     admin = admin_auth_service.authenticate(
+  47:         username=credentials.username,
+  48:         password=credentials.password,
+  49:     )
+  50: 
+  51:     if admin is None:
+  52:         raise HTTPException(
+  53:             status_code=(
+  54:                 status.HTTP_401_UNAUTHORIZED
+  55:             ),
+  56:             detail="Invalid admin credentials.",
+  57:             headers={
+  58:                 "WWW-Authenticate": "Basic"
+  59:             },
+  60:         )
+  61: 
+  62:     return admin
+  63: 
+  64: 
+  65: @router.get("/me")
+  66: def get_current_admin(
+  67:     admin: dict = Depends(require_admin),
+  68: ):
+  69:     return admin
+  70: 
+  71: 
+  72: @router.post("/admins")
+  73: def create_admin(
+  74:     request: CreateAdminRequest,
+  75:     current_admin: dict = Depends(
+  76:         require_admin
+  77:     ),
+  78: ):
+  79: 
+  80:     try:
+  81:         admin = admin_auth_service.create_admin(
+  82:             username=request.username,
+  83:             password=request.password,
+  84:         )
+  85: 
+  86:     except ValueError as error:
+  87:         message = str(error)
+  88: 
+  89:         status_code = (
+  90:             409
+  91:             if (
+  92:                 "Maximum of 2 admins"
+  93:                 in message
+  94:                 or "already exists"
+  95:                 in message
+  96:             )
+  97:             else 400
+  98:         )
+  99: 
+ 100:         raise HTTPException(
+ 101:             status_code=status_code,
+ 102:             detail=message,
+ 103:         ) from error
+ 104: 
+ 105:     return {
+ 106:         "message": "Admin created successfully.",
+ 107:         "admin": admin,
+ 108:         "created_by": current_admin["username"],
+ 109:     }
+ 110: 
+ 111: 
+ 112: @router.delete("/admins/{admin_id}")
+ 113: def delete_admin(
+ 114:     admin_id: str,
+ 115:     current_admin: dict = Depends(
+ 116:         require_admin
+ 117:     ),
+ 118: ):
+ 119: 
+ 120:     if admin_id == current_admin["id"]:
+ 121:         raise HTTPException(
+ 122:             status_code=400,
+ 123:             detail=(
+ 124:                 "You cannot delete your own "
+ 125:                 "admin account."
+ 126:             ),
+ 127:         )
+ 128: 
+ 129:     try:
+ 130:         deleted = (
+ 131:             admin_auth_service.delete_admin(
+ 132:                 admin_id=admin_id
+ 133:             )
+ 134:         )
+ 135: 
+ 136:     except ValueError as error:
+ 137:         raise HTTPException(
+ 138:             status_code=409,
+ 139:             detail=str(error),
+ 140:         ) from error
+ 141: 
+ 142:     if not deleted:
+ 143:         raise HTTPException(
+ 144:             status_code=404,
+ 145:             detail="Admin not found.",
+ 146:         )
+ 147: 
+ 148:     return {
+ 149:         "message": "Admin deleted successfully.",
+ 150:     }
+ 151: 
+ 152: 
+ 153: @router.post("/documents/upload")
+ 154: def upload_document(
+ 155:     year: int = Form(...),
+ 156:     official_url: str = Form(...),
+ 157:     file: UploadFile = File(...),
+ 158:     admin: dict = Depends(require_admin),
+ 159: ):
+ 160: 
+ 161:     filename = Path(
+ 162:         file.filename or ""
+ 163:     ).name
+ 164: 
+ 165:     if not filename:
+
+===== ADMIN AUTH DEPENDENCY =====
+
+  backend\src\api\admin.py:35:class CreateAdminRequest(BaseModel):
+  backend\src\api\admin.py:36:    username: str
+  backend\src\api\admin.py:37:    password: str
+  backend\src\api\admin.py:38:
+  backend\src\api\admin.py:39:
+> backend\src\api\admin.py:40:def require_admin(
+  backend\src\api\admin.py:41:    credentials: HTTPBasicCredentials = Depends(
+  backend\src\api\admin.py:42:        security
+  backend\src\api\admin.py:43:    ),
+  backend\src\api\admin.py:44:) -> dict:
+  backend\src\api\admin.py:45:
+  backend\src\api\admin.py:46:    admin = admin_auth_service.authenticate(
+  backend\src\api\admin.py:47:        username=credentials.username,
+  backend\src\api\admin.py:48:        password=credentials.password,
+  backend\src\api\admin.py:49:    )
+  backend\src\api\admin.py:50:
+  backend\src\api\admin.py:51:    if admin is None:
+  backend\src\api\admin.py:52:        raise HTTPException(
+  backend\src\api\admin.py:53:            status_code=(
+  backend\src\api\admin.py:54:                status.HTTP_401_UNAUTHORIZED
+  backend\src\api\admin.py:55:            ),
+
+===== API REQUEST HELPER =====
+export const API_BASE_URL: string =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://127.0.0.1:8000";
+
+export class ApiError extends Error {
+  status?: number;
+
+  constructor(
+    message: string,
+    status?: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+interface RequestOptions {
+  method?:
+    | "GET"
+    | "POST"
+    | "PUT"
+    | "PATCH"
+    | "DELETE";
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const {
+    method = "GET",
+    body,
+    headers = {},
+  } = options;
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}${path}`,
+      {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+        body:
+          body !== undefined
+            ? JSON.stringify(body)
+            : undefined,
+      },
+    );
+  } catch {
+    throw new ApiError(
+      "Could not reach the ProspectusAI server. " +
+        "Please check your connection and try again.",
+    );
+  }
+
+  if (!response.ok) {
+    let message =
+      `Request failed with status ${response.status}`;
+
+    try {
+      const errorBody = await response.json();
+
+      if (
+        typeof errorBody?.detail === "string"
+      ) {
+        message = errorBody.detail;
+      } else if (
+        typeof errorBody?.message === "string"
+      ) {
+        message = errorBody.message;
+      }
+    } catch {
+      // Keep the default message.
+    }
+
+    throw new ApiError(
+      message,
+      response.status,
+    );
+  }
+
+  const text = await response.text();
+
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
+}
+
+export function buildPageUrl(
+  pageUrl: string,
+): string {
+  if (/^https?:\/\//i.test(pageUrl)) {
+    return pageUrl;
+  }
+
+  return (
+    `${API_BASE_URL}` +
+    `${pageUrl.startsWith("/") ? "" : "/"}` +
+    pageUrl
+  );
+}
+
+===== ADMIN API BOTTOM =====
+ 165:     if not filename:
+ 166:         raise HTTPException(
+ 167:             status_code=400,
+ 168:             detail="A filename is required.",
+ 169:         )
+ 170: 
+ 171:     if Path(filename).suffix.lower() != ".pdf":
+ 172:         raise HTTPException(
+ 173:             status_code=400,
+ 174:             detail="Only PDF files are allowed.",
+ 175:         )
+ 176: 
+ 177:     if year < 2000 or year > 2100:
+ 178:         raise HTTPException(
+ 179:             status_code=400,
+ 180:             detail="Invalid prospectus year.",
+ 181:         )
+ 182: 
+ 183:     official_url = official_url.strip()
+ 184: 
+ 185:     if not official_url.startswith(
+ 186:         ("https://", "http://")
+ 187:     ):
+ 188:         raise HTTPException(
+ 189:             status_code=400,
+ 190:             detail=(
+ 191:                 "A valid official prospectus URL "
+ 192:                 "is required."
+ 193:             ),
+ 194:         )
+ 195: 
+ 196:     uploads_dir = (
+ 197:         document_manager.storage_dir
+ 198:         / "uploads"
+ 199:     )
+ 200: 
+ 201:     uploads_dir.mkdir(
+ 202:         parents=True,
+ 203:         exist_ok=True,
+ 204:     )
+ 205: 
+ 206:     pdf_path = uploads_dir / filename
+ 207: 
+ 208:     try:
+ 209:         with pdf_path.open("wb") as output:
+ 210:             shutil.copyfileobj(
+ 211:                 file.file,
+ 212:                 output,
+ 213:             )
+ 214: 
+ 215:         entry = (
+ 216:             document_manager.register_document(
+ 217:                 pdf_path=pdf_path,
+ 218:                 year=year,
+ 219:                 official_url=official_url,
+ 220:                 status="uploaded",
+ 221:             )
+ 222:         )
+ 223: 
+ 224:         from src.services.document_processing_service import (
+ 225:             DocumentProcessingService,
+ 226:         )
+ 227: 
+ 228:         processor = DocumentProcessingService()
+ 229: 
+ 230:         result = processor.process(
+ 231:             document_id=entry["document_id"],
+ 232:         )
+ 233: 
+ 234:     except Exception as error:
+ 235:         raise HTTPException(
+ 236:             status_code=500,
+ 237:             detail=str(error),
+ 238:         ) from error
+ 239: 
+ 240:     finally:
+ 241:         file.file.close()
+ 242: 
+ 243:     return {
+ 244:         "message": (
+ 245:             "Prospectus uploaded and processed "
+ 246:             "successfully."
+ 247:         ),
+ 248:         "uploaded_by": admin["username"],
+ 249:         "document": entry,
+ 250:         "result": result,
+ 251:     }
+ 252: 
+ 253: 
+ 254: @router.post("/documents/{document_id}/process")
+ 255: def process_document(
+ 256:     document_id: str,
+ 257:     admin: dict = Depends(require_admin),
+ 258: ):
+ 259: 
+ 260:     from src.services.document_processing_service import (
+ 261:         DocumentProcessingService,
+ 262:     )
+ 263: 
+ 264:     processor = DocumentProcessingService()
+ 265: 
+ 266:     try:
+ 267:         result = processor.process(
+ 268:             document_id=document_id,
+ 269:         )
+ 270: 
+ 271:     except FileNotFoundError as error:
+ 272:         raise HTTPException(
+ 273:             status_code=404,
+ 274:             detail=str(error),
+ 275:         ) from error
+ 276: 
+ 277:     except Exception as error:
+ 278:         raise HTTPException(
+ 279:             status_code=500,
+ 280:             detail=str(error),
+ 281:         ) from error
+ 282: 
+ 283:     return {
+ 284:         "message": (
+ 285:             "Prospectus processed successfully."
+ 286:         ),
+ 287:         "processed_by": admin["username"],
+ 288:         "result": result,
+ 289:     }
+
+

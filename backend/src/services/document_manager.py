@@ -72,6 +72,7 @@ class DocumentManager:
         self,
         pdf_path: Path,
         year: int,
+        official_url: str,
         status: str = "uploaded",
     ) -> dict[str, Any]:
 
@@ -101,6 +102,7 @@ class DocumentManager:
             "document_id": document_id,
             "filename": pdf_path.name,
             "year": year,
+            "official_url": official_url,
             "status": status,
             "uploaded_at": (
                 datetime.now(timezone.utc).isoformat()
@@ -114,6 +116,28 @@ class DocumentManager:
         self.save_registry(registry)
 
         return entry
+
+    def update_document(
+        self,
+        document_id: str,
+        **updates: Any,
+    ) -> dict[str, Any]:
+
+        registry = self.load_registry()
+
+        for document in registry["documents"]:
+            if (
+                document["document_id"]
+                == document_id
+            ):
+                document.update(updates)
+                self.save_registry(registry)
+                return document
+
+        raise ValueError(
+            f"Unknown document: {document_id}"
+        )
+
 
     def mark_ready(
         self,
@@ -248,14 +272,14 @@ class DocumentManager:
             / f"{document_id}.json"
         )
 
-    def get_graph_path(
+    def get_sections_path(
         self,
         document_id: str,
     ) -> Path:
 
         return (
             self.storage_dir
-            / "graph"
+            / "sections"
             / f"{document_id}.json"
         )
 
@@ -411,7 +435,7 @@ class DocumentManager:
             self.get_cleaned_path(document_id),
             self.get_chunks_path(document_id),
             self.get_tables_path(document_id),
-            self.get_graph_path(document_id),
+            self.get_sections_path(document_id),
         ]
 
         for path in file_paths:

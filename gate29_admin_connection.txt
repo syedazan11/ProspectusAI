@@ -1,0 +1,768 @@
+﻿===== BACKEND ADMIN ROUTES =====
+
+> backend\src\api\admin.py:65:@router.get("/me")
+  backend\src\api\admin.py:66:def get_current_admin(
+  backend\src\api\admin.py:67:    admin: dict = Depends(require_admin),
+  backend\src\api\admin.py:68:):
+  backend\src\api\admin.py:69:    return admin
+  backend\src\api\admin.py:70:
+  backend\src\api\admin.py:71:
+> backend\src\api\admin.py:72:@router.post("/admins")
+> backend\src\api\admin.py:73:def create_admin(
+  backend\src\api\admin.py:74:    request: CreateAdminRequest,
+  backend\src\api\admin.py:75:    current_admin: dict = Depends(
+  backend\src\api\admin.py:76:        require_admin
+  backend\src\api\admin.py:77:    ),
+  backend\src\api\admin.py:78:):
+  backend\src\api\admin.py:79:
+  backend\src\api\admin.py:80:    try:
+  backend\src\api\admin.py:81:        admin = admin_auth_service.create_admin(
+  backend\src\api\admin.py:82:            username=request.username,
+  backend\src\api\admin.py:83:            password=request.password,
+  backend\src\api\admin.py:84:        )
+  backend\src\api\admin.py:85:
+> backend\src\api\admin.py:112:@router.delete("/admins/{admin_id}")
+> backend\src\api\admin.py:113:def delete_admin(
+  backend\src\api\admin.py:114:    admin_id: str,
+  backend\src\api\admin.py:115:    current_admin: dict = Depends(
+  backend\src\api\admin.py:116:        require_admin
+  backend\src\api\admin.py:117:    ),
+  backend\src\api\admin.py:118:):
+  backend\src\api\admin.py:119:
+  backend\src\api\admin.py:120:    if admin_id == current_admin["id"]:
+  backend\src\api\admin.py:121:        raise HTTPException(
+  backend\src\api\admin.py:122:            status_code=400,
+  backend\src\api\admin.py:123:            detail=(
+  backend\src\api\admin.py:124:                "You cannot delete your own "
+  backend\src\api\admin.py:125:                "admin account."
+> backend\src\api\admin.py:153:@router.post("/documents/upload")
+  backend\src\api\admin.py:154:def upload_document(
+  backend\src\api\admin.py:155:    year: int = Form(...),
+  backend\src\api\admin.py:156:    official_url: str = Form(...),
+  backend\src\api\admin.py:157:    file: UploadFile = File(...),
+  backend\src\api\admin.py:158:    admin: dict = Depends(require_admin),
+  backend\src\api\admin.py:159:):
+  backend\src\api\admin.py:160:
+  backend\src\api\admin.py:161:    filename = Path(
+  backend\src\api\admin.py:162:        file.filename or ""
+  backend\src\api\admin.py:163:    ).name
+  backend\src\api\admin.py:164:
+  backend\src\api\admin.py:165:    if not filename:
+> backend\src\api\admin.py:224:        from src.services.document_processing_service import (
+> backend\src\api\admin.py:225:            DocumentProcessingService,
+  backend\src\api\admin.py:226:        )
+  backend\src\api\admin.py:227:
+> backend\src\api\admin.py:228:        processor = DocumentProcessingService()
+  backend\src\api\admin.py:229:
+  backend\src\api\admin.py:230:        result = processor.process(
+  backend\src\api\admin.py:231:            document_id=entry["document_id"],
+  backend\src\api\admin.py:232:        )
+  backend\src\api\admin.py:233:
+  backend\src\api\admin.py:234:    except Exception as error:
+  backend\src\api\admin.py:235:        raise HTTPException(
+  backend\src\api\admin.py:236:            status_code=500,
+  backend\src\api\admin.py:237:            detail=str(error),
+  backend\src\api\admin.py:238:        ) from error
+  backend\src\api\admin.py:239:
+  backend\src\api\admin.py:240:    finally:
+> backend\src\api\admin.py:254:@router.post("/documents/{document_id}/process")
+  backend\src\api\admin.py:255:def process_document(
+  backend\src\api\admin.py:256:    document_id: str,
+  backend\src\api\admin.py:257:    admin: dict = Depends(require_admin),
+  backend\src\api\admin.py:258:):
+  backend\src\api\admin.py:259:
+> backend\src\api\admin.py:260:    from src.services.document_processing_service import (
+> backend\src\api\admin.py:261:        DocumentProcessingService,
+  backend\src\api\admin.py:262:    )
+  backend\src\api\admin.py:263:
+> backend\src\api\admin.py:264:    processor = DocumentProcessingService()
+  backend\src\api\admin.py:265:
+  backend\src\api\admin.py:266:    try:
+  backend\src\api\admin.py:267:        result = processor.process(
+  backend\src\api\admin.py:268:            document_id=document_id,
+  backend\src\api\admin.py:269:        )
+  backend\src\api\admin.py:270:
+  backend\src\api\admin.py:271:    except FileNotFoundError as error:
+  backend\src\api\admin.py:272:        raise HTTPException(
+  backend\src\api\admin.py:273:            status_code=404,
+  backend\src\api\admin.py:274:            detail=str(error),
+  backend\src\api\admin.py:275:        ) from error
+  backend\src\api\admin.py:276:
+> backend\src\api\chat.py:78:@router.get("/chats")
+  backend\src\api\chat.py:79:def list_chats(
+  backend\src\api\chat.py:80:    x_chat_owner_id: str | None = Header(
+  backend\src\api\chat.py:81:        default=None
+  backend\src\api\chat.py:82:    ),
+  backend\src\api\chat.py:83:):
+  backend\src\api\chat.py:84:
+  backend\src\api\chat.py:85:    owner_id = get_chat_owner_id(
+  backend\src\api\chat.py:86:        x_chat_owner_id
+  backend\src\api\chat.py:87:    )
+  backend\src\api\chat.py:88:
+  backend\src\api\chat.py:89:    return {
+  backend\src\api\chat.py:90:        "chats": chat_service.list_chats(
+> backend\src\api\chat.py:96:@router.post("/chats")
+  backend\src\api\chat.py:97:def create_chat(
+  backend\src\api\chat.py:98:    x_chat_owner_id: str | None = Header(
+  backend\src\api\chat.py:99:        default=None
+  backend\src\api\chat.py:100:    ),
+  backend\src\api\chat.py:101:):
+  backend\src\api\chat.py:102:
+  backend\src\api\chat.py:103:    owner_id = get_chat_owner_id(
+  backend\src\api\chat.py:104:        x_chat_owner_id
+  backend\src\api\chat.py:105:    )
+  backend\src\api\chat.py:106:
+  backend\src\api\chat.py:107:    return chat_service.create_chat(
+  backend\src\api\chat.py:108:        browser_id=owner_id,
+> backend\src\api\chat.py:112:@router.get("/chats/{chat_id}/messages")
+> backend\src\api\chat.py:113:def get_messages(
+  backend\src\api\chat.py:114:    chat_id: str,
+  backend\src\api\chat.py:115:    x_chat_owner_id: str | None = Header(
+  backend\src\api\chat.py:116:        default=None
+  backend\src\api\chat.py:117:    ),
+  backend\src\api\chat.py:118:):
+  backend\src\api\chat.py:119:
+  backend\src\api\chat.py:120:    owner_id = get_chat_owner_id(
+  backend\src\api\chat.py:121:        x_chat_owner_id
+  backend\src\api\chat.py:122:    )
+  backend\src\api\chat.py:123:
+  backend\src\api\chat.py:124:    chat = chat_service.get_chat(
+  backend\src\api\chat.py:125:        browser_id=owner_id,
+> backend\src\api\chat.py:143:@router.post("/chats/{chat_id}/messages/stream")
+  backend\src\api\chat.py:144:def send_message_stream(
+  backend\src\api\chat.py:145:    chat_id: str,
+  backend\src\api\chat.py:146:    payload: dict,
+  backend\src\api\chat.py:147:    x_chat_owner_id: str | None = Header(
+  backend\src\api\chat.py:148:        default=None
+  backend\src\api\chat.py:149:    ),
+  backend\src\api\chat.py:150:):
+  backend\src\api\chat.py:151:
+  backend\src\api\chat.py:152:    owner_id = get_chat_owner_id(
+  backend\src\api\chat.py:153:        x_chat_owner_id
+  backend\src\api\chat.py:154:    )
+  backend\src\api\chat.py:155:
+> backend\src\api\chat.py:270:@router.post("/chats/{chat_id}/messages")
+  backend\src\api\chat.py:271:def send_message(
+  backend\src\api\chat.py:272:    chat_id: str,
+  backend\src\api\chat.py:273:    payload: dict,
+  backend\src\api\chat.py:274:    x_chat_owner_id: str | None = Header(
+  backend\src\api\chat.py:275:        default=None
+  backend\src\api\chat.py:276:    ),
+  backend\src\api\chat.py:277:):
+  backend\src\api\chat.py:278:
+  backend\src\api\chat.py:279:    owner_id = get_chat_owner_id(
+  backend\src\api\chat.py:280:        x_chat_owner_id
+  backend\src\api\chat.py:281:    )
+  backend\src\api\chat.py:282:
+> backend\src\api\chat.py:368:@router.patch("/chats/{chat_id}")
+  backend\src\api\chat.py:369:def rename_chat(
+  backend\src\api\chat.py:370:    chat_id: str,
+  backend\src\api\chat.py:371:    payload: dict,
+  backend\src\api\chat.py:372:    x_chat_owner_id: str | None = Header(
+  backend\src\api\chat.py:373:        default=None
+  backend\src\api\chat.py:374:    ),
+  backend\src\api\chat.py:375:):
+  backend\src\api\chat.py:376:
+  backend\src\api\chat.py:377:    owner_id = get_chat_owner_id(
+  backend\src\api\chat.py:378:        x_chat_owner_id
+  backend\src\api\chat.py:379:    )
+  backend\src\api\chat.py:380:
+> backend\src\api\chat.py:401:@router.delete("/chats/{chat_id}")
+  backend\src\api\chat.py:402:def delete_chat(
+  backend\src\api\chat.py:403:    chat_id: str,
+  backend\src\api\chat.py:404:    x_chat_owner_id: str | None = Header(
+  backend\src\api\chat.py:405:        default=None
+  backend\src\api\chat.py:406:    ),
+  backend\src\api\chat.py:407:):
+  backend\src\api\chat.py:408:
+  backend\src\api\chat.py:409:    owner_id = get_chat_owner_id(
+  backend\src\api\chat.py:410:        x_chat_owner_id
+  backend\src\api\chat.py:411:    )
+  backend\src\api\chat.py:412:
+  backend\src\api\chat.py:413:    deleted = chat_service.delete_chat(
+> backend\src\api\health.py:6:@router.get("/health")
+  backend\src\api\health.py:7:async def health_check():
+  backend\src\api\health.py:8:    return {
+  backend\src\api\health.py:9:        "status": "healthy",
+  backend\src\api\health.py:10:        "service": "ProspectusAI",
+  backend\src\api\health.py:11:    }
+
+===== FRONTEND ADMIN SERVICE =====
+import { apiRequest, ApiError } from "./api";
+import type {
+  AdminLoginResponse,
+  BackendCallResult,
+  ProcessingStatusResponse,
+  ProspectusDocument,
+} from "../types/admin";
+
+/* -------------------------------------------------------------------------
+ * DEVELOPMENT-ONLY MOCK AUTH
+ * -------------------------------------------------------------------------
+ * The real admin backend (POST /api/v1/admin/login) is not built yet.
+ * These fake credentials exist purely so the dashboard can be developed
+ * and demoed locally. They are NOT real credentials, are never sent to
+ * any server, and this whole block should be deleted once the real
+ * /api/v1/admin/login endpoint exists (see loginAdmin below for the
+ * real-endpoint call that is already wired up and ready to use instead).
+ * ---------------------------------------------------------------------- */
+const MOCK_ADMIN_USERNAME = "admin";
+const MOCK_ADMIN_PASSWORD = "prospectus-dev-only";
+const SESSION_KEY = "prospectusai_admin_session";
+
+export interface AdminSession {
+  username: string;
+  token: string;
+  mock: true;
+}
+
+export function mockLogin(
+  username: string,
+  password: string
+): AdminSession | null {
+  if (username === MOCK_ADMIN_USERNAME && password === MOCK_ADMIN_PASSWORD) {
+    const session: AdminSession = {
+      username,
+      token: "mock-session-token",
+      mock: true,
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return session;
+  }
+  return null;
+}
+
+export function getStoredSession(): AdminSession | null {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AdminSession;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSession(): void {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+/* -------------------------------------------------------------------------
+ * REAL BACKEND CALLS (planned endpoints, not built yet)
+ * -------------------------------------------------------------------------
+ * These call the real routes and are ready to use as soon as the backend
+ * team ships them. Each wraps failures into a BackendCallResult so the UI
+ * can distinguish "endpoint doesn't exist / server unreachable" from a
+ * genuine empty result, and show a "not connected yet" state instead of
+ * crashing.
+ * ---------------------------------------------------------------------- */
+
+async function callOptionalEndpoint<T>(
+  fn: () => Promise<T>
+): Promise<BackendCallResult<T>> {
+  try {
+    const data = await fn();
+    return { ok: true, connected: true, data };
+  } catch (err) {
+    const message = err instanceof ApiError ? err.message : "Unknown error";
+    // 404 / network failure -> treat as "not connected yet" rather than a hard error
+    const notConnected =
+      err instanceof ApiError && (err.status === 404 || err.status === undefined);
+    return {
+      ok: false,
+      connected: !notConnected,
+      data: null,
+      error: message,
+    };
+  }
+}
+
+/** POST /api/v1/admin/login (not built yet â€” safe to call, fails gracefully) */
+export async function loginAdmin(
+  username: string,
+  password: string
+): Promise<BackendCallResult<AdminLoginResponse>> {
+  return callOptionalEndpoint(() =>
+    apiRequest<AdminLoginResponse>("/api/v1/admin/login", {
+      method: "POST",
+      body: { username, password },
+    })
+  );
+}
+
+/** POST /api/v1/admin/upload (not built yet â€” safe to call, fails gracefully) */
+export async function uploadProspectus(
+  file: File
+): Promise<BackendCallResult<{ document_id: string }>> {
+  return callOptionalEndpoint(async () => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/api/v1/admin/upload`,
+      { method: "POST", body: formData }
+    );
+    if (!response.ok) {
+      throw new ApiError(`Upload failed with status ${response.status}`, response.status);
+    }
+    return response.json();
+  });
+}
+
+/** GET /api/v1/admin/documents (not built yet â€” safe to call, fails gracefully) */
+export async function fetchDocuments(): Promise<
+  BackendCallResult<ProspectusDocument[]>
+> {
+  return callOptionalEndpoint(() =>
+    apiRequest<ProspectusDocument[]>("/api/v1/admin/documents")
+  );
+}
+
+/** GET /api/v1/admin/processing-status/{document_id} (not built yet) */
+export async function fetchProcessingStatus(
+  documentId: string
+): Promise<BackendCallResult<ProcessingStatusResponse>> {
+  return callOptionalEndpoint(() =>
+    apiRequest<ProcessingStatusResponse>(
+      `/api/v1/admin/processing-status/${encodeURIComponent(documentId)}`
+    )
+  );
+}
+
+===== AUTH CONTEXT =====
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
+import {
+  clearSession,
+  getStoredSession,
+  mockLogin,
+  type AdminSession,
+} from "../services/adminService";
+
+interface AuthContextValue {
+  session: AdminSession | null;
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => boolean;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<AdminSession | null>(() =>
+    getStoredSession()
+  );
+
+  const login = useCallback((username: string, password: string) => {
+    const result = mockLogin(username, password);
+    if (result) {
+      setSession(result);
+      return true;
+    }
+    return false;
+  }, []);
+
+  const logout = useCallback(() => {
+    clearSession();
+    setSession(null);
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{ session, isAuthenticated: !!session, login, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
+}
+
+===== ADMIN LOGIN PAGE =====
+import { useState, type FormEvent } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+export function AdminLoginPage() {
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  if (isAuthenticated) {
+    navigate("/admin", { replace: true });
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const success = login(username.trim(), password);
+    if (success) {
+      const state = location.state as { from?: { pathname?: string } } | null;
+      const redirectTo = state?.from?.pathname || "/admin";
+      navigate(redirectTo, { replace: true });
+    } else {
+      setError("Incorrect username or password.");
+    }
+  }
+
+  return (
+    <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-md flex-col justify-center px-4 py-10 sm:px-6">
+      <div className="rounded-2xl border border-white bg-white/90 p-8 shadow-card">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-brand-gradient text-xl shadow-soft">
+            ðŸ”
+          </div>
+          <h1 className="font-display text-xl font-semibold text-slate-800">
+            Admin sign in
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage prospectus documents and processing
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="username"
+              className="mb-1 block text-sm font-medium text-slate-600"
+            >
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+              placeholder="admin"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-1 block text-sm font-medium text-slate-600"
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-700 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              required
+            />
+          </div>
+
+          {error && (
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition-opacity hover:opacity-90"
+          >
+            Sign in
+          </button>
+        </form>
+
+        <div className="mt-5 rounded-xl bg-amber-50 px-3.5 py-3 text-xs text-amber-800">
+          <p className="font-semibold">Development-only mock login</p>
+          <p className="mt-1">
+            The real admin backend isn't connected yet. Use{" "}
+            <code className="rounded bg-amber-100 px-1 py-0.5">admin</code> /{" "}
+            <code className="rounded bg-amber-100 px-1 py-0.5">
+              prospectus-dev-only
+            </code>{" "}
+            to preview the dashboard locally. This session lives only in your
+            browser tab and is never sent to any server.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+===== UPLOAD AREA =====
+import { useRef, useState, type DragEvent } from "react";
+import { uploadProspectus } from "../../services/adminService";
+
+type UploadState = "idle" | "uploading" | "not_connected" | "error" | "success";
+
+export function UploadArea() {
+  const [isDragging, setIsDragging] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [state, setState] = useState<UploadState>("idle");
+  const [message, setMessage] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    if (file.type !== "application/pdf") {
+      setState("error");
+      setMessage("Please upload a PDF file.");
+      return;
+    }
+
+    setFileName(file.name);
+    setState("uploading");
+    setMessage(null);
+
+    const result = await uploadProspectus(file);
+
+    if (result.ok) {
+      setState("success");
+      setMessage("Upload received.");
+    } else if (!result.connected) {
+      setState("not_connected");
+      setMessage(
+        "This backend feature is not connected yet â€” the upload endpoint (POST /api/v1/admin/upload) hasn't been built. Your file was not sent anywhere."
+      );
+    } else {
+      setState("error");
+      setMessage(result.error || "Upload failed. Please try again.");
+    }
+  }
+
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  }
+
+  return (
+    <div className="rounded-2xl border border-white bg-white/90 p-5 shadow-card">
+      <h3 className="mb-4 font-display text-sm font-semibold text-slate-800">
+        Upload prospectus
+      </h3>
+
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-10 text-center transition-colors ${
+          isDragging
+            ? "border-brand-blue bg-brand-blue/5"
+            : "border-slate-200 hover:border-brand-blue/40 hover:bg-slate-50"
+        }`}
+      >
+        <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-gradient text-lg text-white shadow-soft">
+          â¬†
+        </span>
+        <p className="text-sm font-medium text-slate-700">
+          Drop a PDF here, or click to browse
+        </p>
+        <p className="text-xs text-slate-400">PDF files only</p>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+          }}
+        />
+      </div>
+
+      {fileName && (
+        <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+          <span className="truncate text-slate-600">{fileName}</span>
+          {state === "uploading" && (
+            <span className="text-xs font-medium text-brand-blue">
+              Uploadingâ€¦
+            </span>
+          )}
+          {state === "success" && (
+            <span className="text-xs font-medium text-teal-600">Sent âœ“</span>
+          )}
+        </div>
+      )}
+
+      {message && (
+        <p
+          className={`mt-3 rounded-lg px-3 py-2 text-xs ${
+            state === "not_connected"
+              ? "bg-amber-50 text-amber-700"
+              : state === "error"
+                ? "bg-rose-50 text-rose-600"
+                : "bg-teal-50 text-teal-700"
+          }`}
+        >
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+===== ADMIN DASHBOARD =====
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { fetchDocuments } from "../services/adminService";
+import type { ProspectusDocument } from "../types/admin";
+import { ActiveProspectusCard } from "../components/admin/ActiveProspectusCard";
+import { UploadArea } from "../components/admin/UploadArea";
+import { ProcessingStages } from "../components/admin/ProcessingStages";
+import { SummaryCards } from "../components/admin/SummaryCards";
+
+export function AdminDashboardPage() {
+  const { session } = useAuth();
+  const [activeDocument, setActiveDocument] =
+    useState<ProspectusDocument | null>(null);
+  const [documentsConnected, setDocumentsConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const result = await fetchDocuments();
+      if (cancelled) return;
+      setDocumentsConnected(result.connected && result.ok);
+      if (result.ok && result.data && result.data.length > 0) {
+        setActiveDocument(result.data[0]);
+      }
+      setLoading(false);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-slate-800">
+            Admin dashboard
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Signed in as{" "}
+            <span className="font-medium text-slate-700">
+              {session?.username}
+            </span>{" "}
+            <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+              dev mock session
+            </span>
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grid gap-5 sm:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-32 animate-pulse rounded-2xl bg-white/60"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <ActiveProspectusCard
+            document={activeDocument}
+            isConnected={documentsConnected}
+          />
+          <UploadArea />
+          <ProcessingStages
+            currentStage={activeDocument ? activeDocument.stage : null}
+          />
+          <SummaryCards
+            summary={activeDocument ? activeDocument.summary : null}
+            isConnected={documentsConnected}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+===== ADMIN TYPES =====
+// Types for the (currently mocked / not-yet-built) admin backend.
+// Keep these aligned with the planned endpoints so swapping the mock
+// for a real API later is a drop-in change.
+
+export interface AdminLoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface AdminLoginResponse {
+  token: string;
+  username: string;
+}
+
+export type ProcessingStage =
+  | "Uploaded"
+  | "Parsing"
+  | "Extracting tables"
+  | "Building chunks"
+  | "Building graph"
+  | "Indexing"
+  | "Ready";
+
+export const PROCESSING_STAGES: ProcessingStage[] = [
+  "Uploaded",
+  "Parsing",
+  "Extracting tables",
+  "Building chunks",
+  "Building graph",
+  "Indexing",
+  "Ready",
+];
+
+export interface ProcessingSummary {
+  total_pages: number;
+  processed_pages: number;
+  failed_pages: number;
+  quarantined_pages: number;
+}
+
+export interface ProspectusDocument {
+  document_id: string;
+  name: string;
+  uploaded_at: string;
+  stage: ProcessingStage;
+  summary: ProcessingSummary | null;
+}
+
+export interface ProcessingStatusResponse {
+  document_id: string;
+  stage: ProcessingStage;
+  summary: ProcessingSummary;
+}
+
+/** Generic wrapper so the UI can tell a real response apart from a
+ * "this backend route doesn't exist yet" placeholder result. */
+export interface BackendCallResult<T> {
+  ok: boolean;
+  connected: boolean;
+  data: T | null;
+  error?: string;
+}
+
+

@@ -1,0 +1,195 @@
+﻿===== MESSAGE BUBBLE =====
+import type { ChatMessage } from "../../types/chat";
+import { SourcesList } from "./SourcesList";
+import { PageReviewCard } from "./PageReviewCard";
+
+export function MessageBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+
+  if (isUser) {
+    return (
+      <div className="flex justify-end animate-fade-in-up">
+        <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-brand-gradient px-4 py-2.5 text-sm text-white shadow-soft sm:max-w-[75%]">
+          {message.text}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex justify-start animate-fade-in-up">
+      <div
+        className={`max-w-[90%] rounded-2xl rounded-tl-sm border px-4 py-3 shadow-card sm:max-w-[80%] ${
+          message.isError
+            ? "border-rose-200 bg-rose-50"
+            : "border-white bg-white"
+        }`}
+      >
+        <p
+          className={`text-sm leading-relaxed ${
+            message.isError ? "text-rose-700" : "text-slate-700"
+          }`}
+        >
+          {message.text}
+        </p>
+
+        {message.status === "needs_page_review" &&
+          message.pageReferences &&
+          message.pageReferences.length > 0 && (
+            <PageReviewCard references={message.pageReferences} />
+          )}
+
+        {message.sources && message.sources.length > 0 && (
+          <SourcesList sources={message.sources} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+===== CHAT WINDOW RENDER SECTION =====
+   1: import { useEffect, useRef, useState } from "react";
+   2: import type {
+   3:   ChatMessage,
+   4:   ChatSummary,
+   5:   StoredMessage,
+   6: } from "../../types/chat";
+   7: import {
+   8:   createChat,
+   9:   getChatMessages,
+  10:   listChats,
+  11:   streamChatMessage,
+  12: } from "../../services/chatService";
+  13: import { ApiError } from "../../services/api";
+  14: import { MessageBubble } from "./MessageBubble";
+  15: import { ChatInput } from "./ChatInput";
+  16: import { ExampleChips } from "./ExampleChips";
+  17: 
+  18: interface ChatWindowProps {
+  19:   activeChatId: string | null;
+  20:   onActiveChatChange: (chatId: string) => void;
+  21:   onChatsChange: (chats: ChatSummary[]) => void;
+  22: }
+  23: 
+  24: function toChatMessage(
+  25:   message: StoredMessage,
+  26: ): ChatMessage {
+  27:   return {
+  28:     id: message.id,
+  29:     role: message.role,
+  30:     text: message.content,
+  31:     sources: message.sources,
+  32:     pageReferences: message.page_references,
+  33:     createdAt: new Date(
+  34:       message.created_at,
+  35:     ).getTime(),
+  36:   };
+  37: }
+  38: 
+  39: export function ChatWindow({
+  40:   activeChatId,
+  41:   onActiveChatChange,
+  42:   onChatsChange,
+  43: }: ChatWindowProps) {
+  44:   const [messages, setMessages] = useState<
+  45:     ChatMessage[]
+  46:   >([]);
+  47:   const [isLoading, setIsLoading] =
+  48:     useState(false);
+  49:   const [isLoadingHistory, setIsLoadingHistory] =
+  50:     useState(false);
+  51:   const scrollRef = useRef<HTMLDivElement>(null);
+  52:   const skipNextHistoryLoad = useRef(false);
+  53: 
+  54:   useEffect(() => {
+  55:     if (!activeChatId) {
+  56:       setMessages([]);
+  57:       return;
+  58:     }
+  59: 
+  60:     if (skipNextHistoryLoad.current) {
+  61:       skipNextHistoryLoad.current = false;
+  62:       return;
+  63:     }
+  64: 
+  65:     let cancelled = false;
+  66: 
+  67:     async function loadHistory() {
+  68:       setIsLoadingHistory(true);
+  69: 
+  70:       try {
+  71:         const response =
+  72:           await getChatMessages(activeChatId!);
+  73: 
+  74:         if (!cancelled) {
+  75:           setMessages(
+  76:             response.messages.map(toChatMessage),
+  77:           );
+  78:         }
+  79:       } catch {
+  80:         if (!cancelled) {
+  81:           setMessages([]);
+  82:         }
+  83:       } finally {
+  84:         if (!cancelled) {
+  85:           setIsLoadingHistory(false);
+  86:         }
+  87:       }
+  88:     }
+  89: 
+  90:     void loadHistory();
+  91: 
+  92:     return () => {
+  93:       cancelled = true;
+  94:     };
+  95:   }, [activeChatId]);
+  96: 
+  97:   useEffect(() => {
+  98:     scrollRef.current?.scrollTo({
+  99:       top: scrollRef.current.scrollHeight,
+ 100:       behavior: "smooth",
+ 101:     });
+ 102:   }, [messages, isLoading]);
+ 103: 
+ 104:   async function ensureChat(): Promise<string> {
+ 105:     if (activeChatId) {
+ 106:       return activeChatId;
+ 107:     }
+ 108: 
+ 109:     const chat = await createChat();
+ 110: 
+ 111:     skipNextHistoryLoad.current = true;
+ 112:     onActiveChatChange(chat.id);
+ 113: 
+ 114:     const chats = await listChats();
+ 115:     onChatsChange(chats);
+ 116: 
+ 117:     return chat.id;
+ 118:   }
+ 119: 
+ 120:   async function handleSend(question: string) {
+ 121:     if (isLoading) {
+ 122:       return;
+ 123:     }
+ 124: 
+ 125:     const optimisticUserMessage: ChatMessage = {
+ 126:       id: `pending-${Date.now()}`,
+ 127:       role: "user",
+ 128:       text: question,
+ 129:       createdAt: Date.now(),
+ 130:     };
+ 131: 
+ 132:     setMessages((previous) => [
+ 133:       ...previous,
+ 134:       optimisticUserMessage,
+ 135:     ]);
+ 136:     setIsLoading(true);
+ 137: 
+ 138:     try {
+ 139:       const chatId = await ensureChat();
+ 140: 
+ 141:       const streamingMessageId =
+ 142:         `streaming-${Date.now()}`;
+ 143: 
+ 144:       setMessages((previous) => [
+ 145:         ...previous,

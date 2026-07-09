@@ -1,0 +1,204 @@
+﻿===== ANSWER SERVICE INIT =====
+   1: import os
+   2: import re
+   3: from pathlib import Path
+   4: from typing import Any
+   5: 
+   6: from dotenv import load_dotenv
+   7: from groq import Groq
+   8: 
+   9: from src.retrieval.retriever import Retriever
+  10: 
+  11: 
+  12: PROJECT_ROOT = Path(__file__).resolve().parents[2]
+  13: 
+  14: load_dotenv(
+  15:     PROJECT_ROOT / ".env"
+  16: )
+  17: 
+  18: 
+  19: class RescueAnswerService:
+  20: 
+  21:     def __init__(
+  22:         self,
+  23:         collection_name: str,
+  24:     ):
+  25: 
+  26:         self.retriever = Retriever(
+  27:             collection_name=collection_name,
+  28:         )
+  29: 
+  30:         api_key = os.getenv("LLM_API_KEY")
+  31: 
+  32:         if not api_key:
+  33:             raise RuntimeError(
+  34:                 "LLM_API_KEY is missing."
+  35:             )
+  36: 
+  37:         self.client = Groq(
+  38:             api_key=api_key
+  39:         )
+  40: 
+  41:         self.model = os.getenv(
+  42:             "LLM_MODEL"
+  43:         )
+  44: 
+  45:         if not self.model:
+  46:             raise RuntimeError(
+  47:                 "LLM_MODEL is missing."
+  48:             )
+  49: 
+  50: 
+  51:     def answer(
+  52:         self,
+  53:         question: str,
+  54:         top_k: int = 8,
+  55:         conversation_history: list[dict[str, Any]]
+  56:         | None = None,
+  57:     ) -> dict[str, Any]:
+  58: 
+  59:         question = question.strip()
+  60: 
+  61:         if not question:
+  62:             raise ValueError(
+  63:                 "Question cannot be empty."
+  64:             )
+  65: 
+  66:         conversational_response = (
+  67:             self._handle_conversation(question)
+  68:         )
+  69: 
+  70:         if conversational_response is not None:
+  71:             return conversational_response
+  72: 
+  73:         recent_history = (
+  74:             conversation_history or []
+  75:         )[-6:]
+  76: 
+  77:         retrieval_query = (
+  78:             self._build_retrieval_query(
+  79:                 question=question,
+  80:                 conversation_history=recent_history,
+  81:             )
+  82:         )
+  83: 
+  84:         chunks = self.retriever.retrieve(
+  85:             query=retrieval_query,
+  86:             top_k=min(
+  87:                 max(top_k, 8),
+  88:                 12,
+  89:             ),
+  90:         )
+
+===== DOCUMENT MANAGER ACTIVE DOCUMENT =====
+
+> src\services\document_manager.py:152:    def get_active_document(
+  src\services\document_manager.py:153:        self,
+  src\services\document_manager.py:154:    ) -> dict[str, Any]:
+  src\services\document_manager.py:155:
+  src\services\document_manager.py:156:        registry = self.load_registry()
+  src\services\document_manager.py:157:
+  src\services\document_manager.py:158:        active_id = registry.get(
+  src\services\document_manager.py:159:            "active_document_id"
+  src\services\document_manager.py:160:        )
+  src\services\document_manager.py:161:
+  src\services\document_manager.py:162:        if not active_id:
+  src\services\document_manager.py:163:            raise FileNotFoundError(
+  src\services\document_manager.py:164:                "No active prospectus is 
+configured."
+  src\services\document_manager.py:165:            )
+  src\services\document_manager.py:166:
+  src\services\document_manager.py:167:        for document in 
+registry["documents"]:
+  src\services\document_manager.py:168:
+  src\services\document_manager.py:169:            if (
+  src\services\document_manager.py:170:                document["document_id"]
+  src\services\document_manager.py:171:                == active_id
+  src\services\document_manager.py:172:                and document["status"] == 
+"ready"
+  src\services\document_manager.py:173:            ):
+  src\services\document_manager.py:174:                return document
+  src\services\document_manager.py:175:
+  src\services\document_manager.py:176:        raise FileNotFoundError(
+  src\services\document_manager.py:177:            "The active prospectus is not 
+ready."
+  src\services\document_manager.py:178:        )
+  src\services\document_manager.py:179:
+> src\services\document_manager.py:180:    def get_active_document_id(self) -> str:
+  src\services\document_manager.py:181:
+  src\services\document_manager.py:182:        return self.get_active_document()[
+  src\services\document_manager.py:183:            "document_id"
+  src\services\document_manager.py:184:        ]
+  src\services\document_manager.py:185:
+  src\services\document_manager.py:186:    def get_upload_path(
+  src\services\document_manager.py:187:        self,
+  src\services\document_manager.py:188:        document_id: str,
+  src\services\document_manager.py:189:    ) -> Path:
+  src\services\document_manager.py:190:
+  src\services\document_manager.py:191:        registry = self.load_registry()
+  src\services\document_manager.py:192:
+  src\services\document_manager.py:193:        for document in 
+registry["documents"]:
+  src\services\document_manager.py:194:
+  src\services\document_manager.py:195:            if (
+  src\services\document_manager.py:196:                document["document_id"]
+  src\services\document_manager.py:197:                == document_id
+  src\services\document_manager.py:198:            ):
+  src\services\document_manager.py:199:                return (
+  src\services\document_manager.py:200:                    self.storage_dir
+  src\services\document_manager.py:201:                    / "uploads"
+  src\services\document_manager.py:202:                    / document["filename"]
+  src\services\document_manager.py:203:                )
+  src\services\document_manager.py:204:
+  src\services\document_manager.py:205:        raise FileNotFoundError(
+  src\services\document_manager.py:206:            f"Unknown document: 
+{document_id}"
+  src\services\document_manager.py:207:        )
+  src\services\document_manager.py:208:
+  src\services\document_manager.py:209:    def get_parsed_path(
+  src\services\document_manager.py:210:        self,
+  src\services\document_manager.py:211:        document_id: str,
+  src\services\document_manager.py:212:    ) -> Path:
+  src\services\document_manager.py:213:
+  src\services\document_manager.py:214:        return (
+  src\services\document_manager.py:215:            self.storage_dir
+  src\services\document_manager.py:216:            / "parsed"
+  src\services\document_manager.py:217:            / f"{document_id}.json"
+  src\services\document_manager.py:218:        )
+  src\services\document_manager.py:219:
+  src\services\document_manager.py:220:    def get_cleaned_path(
+  src\services\document_manager.py:221:        self,
+  src\services\document_manager.py:222:        document_id: str,
+  src\services\document_manager.py:223:    ) -> Path:
+  src\services\document_manager.py:224:
+  src\services\document_manager.py:225:        return (
+
+===== SECTIONS PATH USAGE =====
+src\processing\prospectus\seat_distribution_router.py:44:        sections_path: 
+Path | None,
+src\processing\prospectus\seat_distribution_router.py:55:            sections_path
+src\processing\prospectus\seat_distribution_router.py:76:            sections_path
+src\processing\prospectus\seat_distribution_router.py:170:        sections_path: 
+Path | None,
+src\processing\prospectus\seat_distribution_router.py:173:        if sections_path 
+is None:
+src\processing\prospectus\seat_distribution_router.py:176:        if not 
+sections_path.exists():
+src\processing\prospectus\seat_distribution_router.py:181:                
+sections_path.read_text(
+src\processing\prospectus\seat_distribution_router.py:200:        sections_path: 
+Path,
+src\processing\prospectus\seat_distribution_router.py:205:                
+sections_path.read_text(
+src\processing\prospectus\seat_distribution_router.py:223:        return 
+sections_path.stem
+src\services\document_manager.py:253:    def get_sections_path(
+src\services\document_manager.py:416:            
+self.get_sections_path(document_id),
+src\services\document_processing_service.py:50:        sections_path = (
+src\services\document_processing_service.py:51:            
+self.document_manager.get_sections_path(
+src\services\document_processing_service.py:110:        sections_path.parent.mkdir(
+src\services\document_processing_service.py:115:        sections_path.write_text(
+
+

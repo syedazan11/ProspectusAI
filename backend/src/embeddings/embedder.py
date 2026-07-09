@@ -1,33 +1,88 @@
-from sentence_transformers import SentenceTransformer
+﻿import os
+
+import numpy as np
+from dotenv import load_dotenv
+from fastembed import TextEmbedding
 
 
 class EmbeddingService:
     """
-    Generates embeddings for text using a SentenceTransformer model.
+    Provider-configured embedding service.
+
+    The active embedding provider and model are
+    selected entirely through environment variables.
     """
 
-    def __init__(self):
+    SUPPORTED_PROVIDERS = {
+        "fastembed",
+    }
 
-        self.model = SentenceTransformer(
-            "BAAI/bge-small-en-v1.5"
+    def __init__(
+        self,
+        provider: str | None = None,
+        model_name: str | None = None,
+    ):
+        load_dotenv()
+
+        self.provider = (
+            provider
+            or os.getenv(
+                "EMBEDDING_PROVIDER",
+                "fastembed",
+            )
+        ).strip().lower()
+
+        self.model_name = (
+            model_name
+            or os.getenv(
+                "EMBEDDING_MODEL",
+                "BAAI/bge-small-en-v1.5",
+            )
+        ).strip()
+
+        if (
+            self.provider
+            not in self.SUPPORTED_PROVIDERS
+        ):
+            raise ValueError(
+                "Unsupported embedding provider: "
+                f"{self.provider}"
+            )
+
+        self.model = TextEmbedding(
+            model_name=self.model_name
         )
 
-    def embed(self, text: str):
+    def embed_documents(
+        self,
+        texts: list[str],
+    ) -> list[np.ndarray]:
+        if not texts:
+            return []
 
-        return self.model.encode(
-            text,
-            normalize_embeddings=True,
+        return list(
+            self.model.embed(texts)
         )
 
-    def embed_batch(self, texts: list[str]):
+    def embed_query(
+        self,
+        query: str,
+    ) -> np.ndarray:
+        if not query.strip():
+            raise ValueError(
+                "Query cannot be empty."
+            )
 
-        return self.model.encode(
-            texts,
-            normalize_embeddings=True,
+        embeddings = list(
+            self.model.embed([query])
         )
-    def embed_query(self, query: str):
-        """
-        Generates an embedding for a search query.
-        """
 
-        return self.embed(query)
+        return embeddings[0]
+
+    @property
+    def vector_size(self) -> int:
+        embedding = self.embed_query(
+            "vector dimension probe"
+        )
+
+        return int(embedding.shape[0])
