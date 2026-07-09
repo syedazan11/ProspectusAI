@@ -2,12 +2,21 @@ import json
 import re
 from typing import Any
 
+from src.indexing.curriculum_indexer import (
+    CurriculumIndexer,
+)
 from src.indexing.indexer import Indexer
 from src.ingestion.document_classifier import (
     DocumentClassifier,
 )
 from src.ingestion.loader import DocumentLoader
 from src.ingestion.parser import DocumentParser
+from src.processing.prospectus.curriculum_parse_service import (
+    CurriculumParseService,
+)
+from src.processing.prospectus.curriculum_record_extractor import (
+    CurriculumRecordExtractor,
+)
 from src.processing.prospectus.section_detector import (
     ProspectusSectionDetector,
 )
@@ -150,6 +159,177 @@ class DocumentProcessingService:
                 encoding="utf-8",
             )
 
+            curriculum_result = {
+                "detected": False,
+                "records": 0,
+                "start_page": None,
+                "end_page": None,
+            }
+
+            curriculum_section = next(
+                (
+                    section
+                    for section in sections
+                    if section.section_type
+                    == "curriculum"
+                ),
+                None,
+            )
+
+            if curriculum_section is not None:
+                import fitz
+
+                curriculum_result[
+                    "detected"
+                ] = True
+
+                curriculum_start = (
+                    curriculum_section.start_page
+                )
+                curriculum_end = (
+                    curriculum_section.end_page
+                )
+
+                curriculum_result[
+                    "start_page"
+                ] = curriculum_start
+
+                curriculum_result[
+                    "end_page"
+                ] = curriculum_end
+
+                processed_dir = (
+                    pdf_path.parent.parent
+                    / "processed"
+                    / document_id
+                )
+
+                processed_dir.mkdir(
+                    parents=True,
+                    exist_ok=True,
+                )
+
+                curriculum_pdf_path = (
+                    processed_dir
+                    / "curriculum_pages.pdf"
+                )
+
+                curriculum_parse_path = (
+                    processed_dir
+                    / "curriculum_llamaparse_v1.json"
+                )
+
+                curriculum_records_path = (
+                    processed_dir
+                    / "curriculum_records_v2.json"
+                )
+
+                source_pdf = fitz.open(pdf_path)
+
+                try:
+                    curriculum_pdf = fitz.open()
+
+                    curriculum_pdf.insert_pdf(
+                        source_pdf,
+                        from_page=curriculum_start - 1,
+                        to_page=curriculum_end - 1,
+                    )
+
+                    curriculum_pdf.save(
+                        curriculum_pdf_path
+                    )
+
+                    curriculum_pdf.close()
+
+                finally:
+                    source_pdf.close()
+
+                print(
+                    "\n=== CURRICULUM ROUTE ==="
+                )
+                print(
+                    f"Pages {curriculum_start}-"
+                    f"{curriculum_end}"
+                )
+
+                curriculum_parse_data = (
+                    CurriculumParseService().parse(
+                        input_path=curriculum_pdf_path,
+                        output_json_path=(
+                            curriculum_parse_path
+                        ),
+                        force=True,
+                    )
+                )
+
+                markdown_pages = (
+                    curriculum_parse_data.get(
+                        "markdown",
+                        []
+                    )
+                )
+
+                if not isinstance(
+                    markdown_pages,
+                    list,
+                ):
+                    raise ValueError(
+                        "Curriculum parser did not "
+                        "return a markdown page list."
+                    )
+
+                curriculum_records = (
+                    CurriculumRecordExtractor().extract(
+                        markdown_pages,
+                        first_source_page=(
+                            curriculum_start
+                        ),
+                    )
+                )
+
+                curriculum_records_path.write_text(
+                    json.dumps(
+                        {
+                            "document_id": document_id,
+                            "source_start_page": (
+                                curriculum_start
+                            ),
+                            "source_end_page": (
+                                curriculum_end
+                            ),
+                            "records": [
+                                record.to_dict()
+                                for record
+                                in curriculum_records
+                            ],
+                        },
+                        indent=2,
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+
+                curriculum_result[
+                    "records"
+                ] = len(curriculum_records)
+
+                if not curriculum_records:
+                    raise ValueError(
+                        "Curriculum section was "
+                        "detected but produced "
+                        "zero curriculum records."
+                    )
+
+                CurriculumIndexer().index(
+                    curriculum_records_path,
+                    document_id=document_id,
+                )
+
+                print(
+                    f"CURRICULUM RECORDS: "
+                    f"{len(curriculum_records)}"
+                )
+
             cleaner.clean(parsed_path)
 
             if not cleaned_path.exists():
@@ -207,6 +387,7 @@ class DocumentProcessingService:
                 "table_pages": len(
                     table_result.get("pages", [])
                 ),
+                "curriculum": curriculum_result,
                 "collection_name": collection_name,
                 "status": "ready",
             }
