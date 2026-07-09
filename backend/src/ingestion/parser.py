@@ -10,6 +10,9 @@ from docling.document_converter import (
     PdfFormatOption,
 )
 
+from src.ingestion.extraction.document_extractor import (
+    DocumentExtractor,
+)
 from src.ingestion.pdf_splitter import PDFSplitter
 from src.schemas.document import (
     ParsedDocument,
@@ -48,6 +51,7 @@ class DocumentParser:
             }
         )
 
+        self.text_extractor = DocumentExtractor()
         self.splitter = PDFSplitter()
         self.table_quality_evaluator = (
             TableQualityEvaluator()
@@ -58,6 +62,17 @@ class DocumentParser:
         pdf_path: Path,
         document_type: str,
     ) -> ParsedDocument:
+
+        print("Extracting authoritative page text...")
+
+        extracted_document = self.text_extractor.extract(
+            pdf_path
+        )
+
+        extracted_by_page = {
+            page.page_number: page
+            for page in extracted_document.pages
+        }
 
         page_paths = self.splitter.split(pdf_path)
 
@@ -205,10 +220,20 @@ class DocumentParser:
             else:
                 route = "local_table_page"
 
+            extracted_page = extracted_by_page.get(
+                page_number
+            )
+
+            authoritative_text = (
+                extracted_page.text.strip()
+                if extracted_page is not None
+                else raw_text
+            )
+
             page = ParsedPage(
                 page_number=page_number,
-                markdown=raw_text,
-                text=raw_text,
+                markdown=authoritative_text,
+                text=authoritative_text,
                 has_tables=table_count > 0,
                 has_images=picture_count > 0,
                 metadata={
@@ -217,6 +242,16 @@ class DocumentParser:
                     "picture_count": picture_count,
                     "route": route,
                     "table_decisions": table_decisions,
+                    "text_extraction_method": (
+                        extracted_page.extraction_method
+                        if extracted_page is not None
+                        else "docling_fallback"
+                    ),
+                    "text_quality": (
+                        extracted_page.quality.to_dict()
+                        if extracted_page is not None
+                        else None
+                    ),
                 },
             )
 
@@ -238,7 +273,7 @@ class DocumentParser:
                 f"  route={route}"
                 f" tables={table_count}"
                 f" pictures={picture_count}"
-                f" chars={len(raw_text)}"
+                f" chars={len(authoritative_text)}"
             )
 
         output_path = (

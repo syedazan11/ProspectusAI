@@ -1,4 +1,4 @@
-﻿import re
+import re
 
 from src.ingestion.extraction.models import TextQuality
 
@@ -45,6 +45,35 @@ class TextQualityAnalyzer:
         )
 
         reasons: list[str] = []
+
+        boilerplate_patterns = [
+            r"ned university",
+            r"undergraduate",
+            r"prospectus\s+20\d{2}",
+            r"engineering\s*&\s*technology",
+            r"neduetofficial",
+            r"neduet official",
+            r"www\.neduet\.edu\.pk",
+        ]
+
+        boilerplate_matches = sum(
+            bool(
+                re.search(
+                    pattern,
+                    normalized,
+                    flags=re.IGNORECASE,
+                )
+            )
+            for pattern in boilerplate_patterns
+        )
+
+        boilerplate_only = (
+            character_count < 350
+            and boilerplate_matches >= 3
+        )
+
+        if boilerplate_only:
+            reasons.append("boilerplate_only")
 
         if character_count < self.MIN_CHARACTERS:
             reasons.append("too_few_characters")

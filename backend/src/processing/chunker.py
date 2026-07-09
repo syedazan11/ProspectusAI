@@ -38,34 +38,63 @@ class DocumentChunker:
 
         for page in document["pages"]:
 
-            # Skip pages with corrupted tables
-            if page.get("table_corrupted", False):
-                continue
+            valid_sections = []
 
-            for section in page["sections"]:
+            for section in page.get("sections", []):
 
-                heading = section["heading"]
+                heading = section.get(
+                    "heading",
+                    "",
+                ).strip()
 
-                # Reject noisy OCR headings
-                letters = len(re.findall(r"[A-Za-z]", heading))
+                content = "\n".join(
+                    section.get("content", [])
+                ).strip()
+
+                letters = len(
+                    re.findall(
+                        r"[A-Za-z]",
+                        heading,
+                    )
+                )
 
                 if (
                     len(heading.split()) < 2
-                    or "¥" in heading
+                    or "??" in heading
                     or letters < 8
+                    or len(content.split()) < 20
+                    or len(content) < 30
                 ):
                     continue
 
-                content = "\n".join(section["content"]).strip()
+                valid_sections.append(
+                    {
+                        "heading": heading,
+                        "content": content,
+                    }
+                )
 
-                # Reject very small chunks
-                words = content.split()
+            if not valid_sections:
 
-                if len(words) < 20:
-                    continue
+                fallback_text = page.get(
+                    "text",
+                    "",
+                ).strip()
 
-                if len(content) < 30:
-                    continue
+                if len(fallback_text.split()) >= 20:
+                    valid_sections.append(
+                        {
+                            "heading": (
+                                f"Page {page['page_number']}"
+                            ),
+                            "content": fallback_text,
+                        }
+                    )
+
+            for section in valid_sections:
+
+                heading = section["heading"]
+                content = section["content"]
 
                 parent_id = f"parent_{chunk_counter}"
 
@@ -76,15 +105,21 @@ class DocumentChunker:
                         page_number=page["page_number"],
                         content=content,
                         metadata={
-                                "document": document["metadata"]["filename"],
-                                "page": page["page_number"],
-                            },
+                            "document": (
+                                document["metadata"]["filename"]
+                            ),
+                            "page": page["page_number"],
+                        },
                     )
                 )
 
-                # Generate child chunks
                 full_text = f"{heading}\n\n{content}"
-                split_chunks = text_splitter.split_text(full_text)
+
+                split_chunks = (
+                    text_splitter.split_text(
+                        full_text
+                    )
+                )
 
                 filtered_chunks = []
 
@@ -95,20 +130,33 @@ class DocumentChunker:
 
                     filtered_chunks.append(chunk)
 
-                for i, chunk_text in enumerate(filtered_chunks, start=1):
+                for i, chunk_text in enumerate(
+                    filtered_chunks,
+                    start=1,
+                ):
 
                     child_chunks.append(
                         ChildChunk(
-                            chunk_id=f"{parent_id}_child_{i}",
+                            chunk_id=(
+                                f"{parent_id}_child_{i}"
+                            ),
                             parent_chunk_id=parent_id,
-                            page_number=page["page_number"],
+                            page_number=(
+                                page["page_number"]
+                            ),
                             heading=heading,
                             content=chunk_text,
                             metadata={
-                                    "document": document["metadata"]["filename"],
-                                    "page": page["page_number"],
-                                    "parent": parent_id,
-                                },
+                                "document": (
+                                    document[
+                                        "metadata"
+                                    ]["filename"]
+                                ),
+                                "page": (
+                                    page["page_number"]
+                                ),
+                                "parent": parent_id,
+                            },
                         )
                     )
 
