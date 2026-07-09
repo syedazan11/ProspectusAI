@@ -112,6 +112,12 @@ class PageRouter:
         drawing_count: int,
     ) -> bool:
 
+        # drawing_count is intentionally retained in the
+        # interface and routing metadata, but is not used as
+        # a table trigger. Designed prospectuses can contain
+        # thousands of decorative vector drawings on normal
+        # pages.
+
         lines = [
             line.strip()
             for line in text.splitlines()
@@ -131,9 +137,6 @@ class PageRouter:
         )
 
         return (
-            drawing_count >= 20
-            or (
-                len(lines) >= 15
-                and short_line_ratio >= 0.55
-            )
+            len(lines) >= 15
+            and short_line_ratio >= 0.55
         )

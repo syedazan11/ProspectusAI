@@ -14,6 +14,7 @@ from src.ingestion.extraction.document_extractor import (
     DocumentExtractor,
 )
 from src.ingestion.pdf_splitter import PDFSplitter
+from src.ingestion.page_router import PageRouter
 from src.schemas.document import (
     ParsedDocument,
     ParsedPage,
@@ -53,6 +54,7 @@ class DocumentParser:
 
         self.text_extractor = DocumentExtractor()
         self.splitter = PDFSplitter()
+        self.page_router = PageRouter()
         self.table_quality_evaluator = (
             TableQualityEvaluator()
         )
@@ -129,6 +131,85 @@ class DocumentParser:
             print(
                 f"Parsing page "
                 f"{page_number}/{len(page_paths)}..."
+            )
+
+            extracted_page = extracted_by_page.get(
+                page_number
+            )
+
+            authoritative_text = (
+                extracted_page.text.strip()
+                if extracted_page is not None
+                else ""
+            )
+
+            text_extraction_method = (
+                extracted_page.extraction_method
+                if extracted_page is not None
+                else "missing_authoritative_text"
+            )
+
+            text_quality = (
+                extracted_page.quality.to_dict()
+                if extracted_page is not None
+                else None
+            )
+
+            cheap_route = self.page_router.analyze_page(
+                page_path=page_path,
+                page_number=page_number,
+                page_type="digital",
+            )
+
+            if cheap_route["route"] == "digital_text":
+                page = ParsedPage(
+                    page_number=page_number,
+                    markdown=authoritative_text,
+                    text=authoritative_text,
+                    has_tables=False,
+                    has_images=False,
+                    metadata={
+                        "page_path": str(page_path),
+                        "table_count": 0,
+                        "picture_count": 0,
+                        "route": "text_page",
+                        "table_decisions": [],
+                        "cheap_route": cheap_route,
+                        "text_extraction_method": (
+                            text_extraction_method
+                        ),
+                        "text_quality": text_quality,
+                    },
+                )
+
+                parsed.pages.append(page)
+
+                output_path.write_text(
+                    json.dumps(
+                        adapter.dump_python(
+                            parsed,
+                            mode="json",
+                        ),
+                        indent=4,
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+
+                print(
+                    f"  route=text_page"
+                    f" tables=0"
+                    f" pictures=0"
+                    f" chars={len(authoritative_text)}"
+                    f" cheap_skip=docling"
+                )
+
+                continue
+
+            print(
+                f"  cheap_route={cheap_route['route']} "
+                f"drawings={cheap_route['drawing_count']}; "
+                "running targeted Docling table analysis..."
             )
 
             result = self.converter.convert(
@@ -219,16 +300,6 @@ class DocumentParser:
 
             else:
                 route = "local_table_page"
-
-            extracted_page = extracted_by_page.get(
-                page_number
-            )
-
-            authoritative_text = (
-                extracted_page.text.strip()
-                if extracted_page is not None
-                else raw_text
-            )
 
             page = ParsedPage(
                 page_number=page_number,
