@@ -50,6 +50,7 @@ class QdrantStore:
             self.client = QdrantClient(
                 url=qdrant_host,
                 api_key=qdrant_api_key,
+                timeout=300,
             )
         else:
             self.client = QdrantClient(
@@ -58,6 +59,7 @@ class QdrantStore:
                     qdrant_port or "6333"
                 ),
                 api_key=qdrant_api_key,
+                timeout=300,
             )
 
         self.collection_name = (
@@ -85,6 +87,8 @@ class QdrantStore:
         for field_name in (
             "document",
             "content_type",
+            "parent_section_code",
+            "parent_section",
             "programme_code",
             "programme",
             "study_year",

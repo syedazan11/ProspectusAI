@@ -1,4 +1,4 @@
-﻿import json
+import json
 from pathlib import Path
 import uuid
 
@@ -15,11 +15,15 @@ class CurriculumIndexer:
 
     BATCH_SIZE = 128
 
-    def __init__(self):
+    def __init__(
+        self,
+        collection_name: str | None = None,
+    ):
         self.embedder = EmbeddingService()
 
         self.vector_store = QdrantStore(
             vector_size=self.embedder.vector_size,
+            collection_name=collection_name,
         )
 
     def index(
@@ -88,6 +92,16 @@ class CurriculumIndexer:
                             "document": document_id,
                             "content_type": (
                                 "curriculum_record"
+                            ),
+                            "parent_section_code": (
+                                record.get(
+                                    "parent_section_code"
+                                )
+                            ),
+                            "parent_section": (
+                                record.get(
+                                    "parent_section"
+                                )
                             ),
                             "programme_code": (
                                 record["programme_code"]

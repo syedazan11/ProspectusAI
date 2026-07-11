@@ -30,7 +30,8 @@ class CurriculumParseService:
             )
 
         self.client = LlamaCloud(
-            api_key=api_key
+            api_key=api_key,
+            timeout=180,
         )
 
     def parse(

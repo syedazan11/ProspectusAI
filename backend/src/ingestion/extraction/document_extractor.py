@@ -27,7 +27,7 @@ class DocumentExtractor:
     def __init__(self) -> None:
         self.native_extractor = PDFExtractor()
         self.ocr_extractor = OCRExtractor(
-            render_scale=2.0,
+            render_scale=1.0,
         )
 
     def extract(
@@ -89,3 +89,4 @@ class DocumentExtractor:
             pages_needing_ocr=failed_pages,
             pages=pages,
         )
+

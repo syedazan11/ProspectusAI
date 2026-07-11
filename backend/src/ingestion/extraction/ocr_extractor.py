@@ -71,19 +71,43 @@ class OCRExtractor:
         pdf: fitz.Document,
         page_numbers: Iterable[int],
     ) -> list[ExtractedPage]:
-        extracted_pages = []
+        import time
 
-        for page_number in page_numbers:
+        extracted_pages = []
+        page_numbers = list(page_numbers)
+        total = len(page_numbers)
+
+        for index, page_number in enumerate(
+            page_numbers,
+            start=1,
+        ):
             if not 1 <= page_number <= len(pdf):
                 raise ValueError(
                     f"Invalid PDF page: {page_number}"
                 )
 
-            extracted_pages.append(
-                self.extract_page(
-                    page=pdf[page_number - 1],
-                    page_number=page_number,
-                )
+            started = time.perf_counter()
+
+            print(
+                f"OCR page {index}/{total} "
+                f"(PDF page {page_number})...",
+                flush=True,
+            )
+
+            extracted_page = self.extract_page(
+                page=pdf[page_number - 1],
+                page_number=page_number,
+            )
+
+            extracted_pages.append(extracted_page)
+
+            elapsed = time.perf_counter() - started
+
+            print(
+                f"  done in {elapsed:.2f}s "
+                f"chars={len(extracted_page.text)} "
+                f"usable={extracted_page.quality.is_usable}",
+                flush=True,
             )
 
         return extracted_pages

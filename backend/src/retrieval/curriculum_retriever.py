@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from src.embeddings.embedder import EmbeddingService
 from src.services.document_manager import DocumentManager
@@ -11,11 +11,17 @@ class CurriculumRetriever:
     exact Qdrant payload filters.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        collection_name: str | None = None,
+        document_id: str | None = None,
+    ):
         self.embedder = EmbeddingService()
+        self.document_id = document_id
 
         self.vector_store = QdrantStore(
             vector_size=self.embedder.vector_size,
+            collection_name=collection_name,
         )
 
     def retrieve(
@@ -27,14 +33,17 @@ class CurriculumRetriever:
         course_code: str | None = None,
         limit: int = 100,
     ) -> list[dict]:
-        active_document = (
-            DocumentManager()
-            .get_active_document()
-        )
+        document_id = self.document_id
 
-        document_id = Path(
-            active_document["filename"]
-        ).stem
+        if document_id is None:
+            active_document = (
+                DocumentManager()
+                .get_active_document()
+            )
+
+            document_id = active_document[
+                "document_id"
+            ]
 
         filters = {
             "programme_code": programme_code,
@@ -86,3 +95,4 @@ class CurriculumRetriever:
             semester,
             99,
         )
+

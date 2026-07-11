@@ -12,8 +12,6 @@ class ProspectusTextNormalizer:
         "UNIVERSITY OF ENGINEERING & TECHNOLOGY",
         "OF ENGINEERING & TECHNOLOGY",
         "UNDERGRADUATE",
-        "UNDERGRADUATE PROSPECTUS 2025",
-        "PROSPECTUS 2025",
         "KARACHI",
         "KARACH",
     }
@@ -110,7 +108,16 @@ class ProspectusTextNormalizer:
             line,
         ).strip().upper()
 
-        return normalized in self.REPEATED_HEADER_LINES
+        if normalized in self.REPEATED_HEADER_LINES:
+            return True
+
+        return bool(
+            re.fullmatch(
+                r"(?:UNDERGRADUATE\s+)?"
+                r"PROSPECTUS\s+20\d{2}",
+                normalized,
+            )
+        )
 
     @staticmethod
     def _is_noise_line(line: str) -> bool:

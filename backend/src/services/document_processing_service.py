@@ -258,16 +258,26 @@ class DocumentProcessingService:
                         output_json_path=(
                             curriculum_parse_path
                         ),
-                        force=True,
+                        force=False,
                     )
                 )
 
-                markdown_pages = (
+                markdown_data = (
                     curriculum_parse_data.get(
                         "markdown",
-                        []
+                        {}
                     )
                 )
+
+                if isinstance(markdown_data, dict):
+                    markdown_pages = (
+                        markdown_data.get(
+                            "pages",
+                            []
+                        )
+                    )
+                else:
+                    markdown_pages = markdown_data
 
                 if not isinstance(
                     markdown_pages,
@@ -320,7 +330,9 @@ class DocumentProcessingService:
                         "zero curriculum records."
                     )
 
-                CurriculumIndexer().index(
+                CurriculumIndexer(
+                    collection_name=collection_name,
+                ).index(
                     curriculum_records_path,
                     document_id=document_id,
                 )

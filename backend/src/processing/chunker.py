@@ -14,7 +14,14 @@ class DocumentChunker:
     Creates parent and child chunks from the cleaned document.
     """
 
-    def chunk(self, cleaned_json: Path):
+    def chunk(
+        self,
+        cleaned_json: Path,
+        *,
+        exclude_pages: set[int] | None = None,
+    ):
+
+        exclude_pages = exclude_pages or set()
 
         with open(cleaned_json, "r", encoding="utf-8") as f:
             document = json.load(f)
@@ -37,6 +44,9 @@ class DocumentChunker:
         chunk_counter = 1
 
         for page in document["pages"]:
+
+            if page["page_number"] in exclude_pages:
+                continue
 
             valid_sections = []
 

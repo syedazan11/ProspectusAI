@@ -6,6 +6,8 @@ from bs4 import BeautifulSoup
 
 @dataclass(slots=True)
 class CurriculumRecord:
+    parent_section_code: str | None
+    parent_section: str | None
     programme_code: str
     programme: str
     study_year: str
@@ -22,6 +24,10 @@ class CurriculumRecord:
 
 
 class CurriculumRecordExtractor:
+    PARENT_SECTION_PATTERN = re.compile(
+        r"^(\d+\.\d+)\s+(.+)$"
+    )
+
     PROGRAMME_PATTERN = re.compile(
         r"^(\d+\.\d+\.\d+)\s+(.+)$"
     )
@@ -46,6 +52,8 @@ class CurriculumRecordExtractor:
     ) -> list[CurriculumRecord]:
         records: list[CurriculumRecord] = []
 
+        current_parent_section_code: str | None = None
+        current_parent_section: str | None = None
         current_programme_code: str | None = None
         current_programme: str | None = None
         current_study_year: str | None = None
@@ -57,25 +65,6 @@ class CurriculumRecordExtractor:
                 continue
 
             source_page = first_source_page + page_index
-
-            detected_programme = (
-                self._find_programme_identity(markdown)
-            )
-
-            if detected_programme:
-                (
-                    current_programme_code,
-                    current_programme,
-                ) = detected_programme
-
-                current_study_year = None
-
-            if (
-                not current_programme_code
-                or not current_programme
-            ):
-                continue
-
             cursor = 0
 
             for table_match in self.TABLE_PATTERN.finditer(
@@ -85,12 +74,55 @@ class CurriculumRecordExtractor:
                     cursor:table_match.start()
                 ]
 
+                for (
+                    identity_type,
+                    identity_code,
+                    identity_name,
+                ) in self._find_identity_events(
+                    preceding_text
+                ):
+                    if identity_type == "parent":
+                        current_parent_section_code = (
+                            identity_code
+                        )
+                        current_parent_section = (
+                            identity_name
+                        )
+                        current_programme_code = None
+                        current_programme = None
+                        current_study_year = None
+                    else:
+                        current_programme_code = (
+                            identity_code
+                        )
+                        current_programme = identity_name
+                        current_study_year = None
+
                 detected_year = self._find_study_year_text(
                     preceding_text
                 )
 
                 if detected_year:
                     current_study_year = detected_year
+
+                if (
+                    not current_programme_code
+                    or not current_programme
+                ):
+                    if (
+                        current_parent_section_code
+                        and current_parent_section
+                        and current_study_year
+                    ):
+                        current_programme_code = (
+                            current_parent_section_code
+                        )
+                        current_programme = (
+                            current_parent_section
+                        )
+                    else:
+                        cursor = table_match.end()
+                        continue
 
                 table = BeautifulSoup(
                     table_match.group(0),
@@ -121,6 +153,12 @@ class CurriculumRecordExtractor:
                     if len(cells) == 10:
                         self._append_semester_record(
                             records=records,
+                            parent_section_code=(
+                                current_parent_section_code
+                            ),
+                            parent_section=(
+                                current_parent_section
+                            ),
                             programme_code=(
                                 current_programme_code
                             ),
@@ -133,6 +171,12 @@ class CurriculumRecordExtractor:
 
                         self._append_semester_record(
                             records=records,
+                            parent_section_code=(
+                                current_parent_section_code
+                            ),
+                            parent_section=(
+                                current_parent_section
+                            ),
                             programme_code=(
                                 current_programme_code
                             ),
@@ -149,6 +193,12 @@ class CurriculumRecordExtractor:
                         if semester:
                             self._append_semester_record(
                                 records=records,
+                                parent_section_code=(
+                                    current_parent_section_code
+                                ),
+                                parent_section=(
+                                    current_parent_section
+                                ),
                                 programme_code=(
                                     current_programme_code
                                 ),
@@ -161,12 +211,36 @@ class CurriculumRecordExtractor:
 
                 cursor = table_match.end()
 
+            trailing_text = markdown[cursor:]
+
+            for (
+                identity_type,
+                identity_code,
+                identity_name,
+            ) in self._find_identity_events(
+                trailing_text
+            ):
+                if identity_type == "parent":
+                    current_parent_section_code = (
+                        identity_code
+                    )
+                    current_parent_section = identity_name
+                    current_programme_code = None
+                    current_programme = None
+                    current_study_year = None
+                else:
+                    current_programme_code = identity_code
+                    current_programme = identity_name
+                    current_study_year = None
+
         return self._deduplicate(records)
 
     def _append_semester_record(
         self,
         *,
         records: list[CurriculumRecord],
+        parent_section_code: str | None,
+        parent_section: str | None,
         programme_code: str,
         programme: str,
         study_year: str,
@@ -190,6 +264,8 @@ class CurriculumRecordExtractor:
 
         records.append(
             CurriculumRecord(
+                parent_section_code=parent_section_code,
+                parent_section=parent_section,
                 programme_code=programme_code,
                 programme=programme,
                 study_year=study_year,
@@ -202,6 +278,81 @@ class CurriculumRecordExtractor:
                 source_page=source_page,
             )
         )
+
+    def _find_identity_events(
+        self,
+        text: str,
+    ) -> list[tuple[str, str, str]]:
+        events: list[tuple[str, str, str]] = []
+
+        for line in text.splitlines():
+            cleaned = re.sub(
+                r"^#{1,6}\s*",
+                "",
+                line.strip(),
+            )
+
+            programme_match = (
+                self.PROGRAMME_PATTERN.match(cleaned)
+            )
+
+            if programme_match:
+                events.append(
+                    (
+                        "programme",
+                        self._clean(
+                            programme_match.group(1)
+                        ),
+                        self._clean(
+                            programme_match.group(2)
+                        ),
+                    )
+                )
+                continue
+
+            parent_match = (
+                self.PARENT_SECTION_PATTERN.match(
+                    cleaned
+                )
+            )
+
+            if parent_match:
+                events.append(
+                    (
+                        "parent",
+                        self._clean(
+                            parent_match.group(1)
+                        ),
+                        self._clean(
+                            parent_match.group(2)
+                        ),
+                    )
+                )
+
+        return events
+
+    def _find_parent_section_identity(
+        self,
+        markdown: str,
+    ) -> tuple[str, str] | None:
+        for line in markdown.splitlines():
+            text = re.sub(
+                r"^#{1,6}\s*",
+                "",
+                line.strip(),
+            )
+
+            match = self.PARENT_SECTION_PATTERN.match(
+                text
+            )
+
+            if match:
+                return (
+                    self._clean(match.group(1)),
+                    self._clean(match.group(2)),
+                )
+
+        return None
 
     def _find_programme_identity(
         self,
@@ -319,6 +470,8 @@ class CurriculumRecordExtractor:
 
         for record in records:
             key = (
+                record.parent_section_code,
+                record.parent_section,
                 record.programme_code,
                 record.programme,
                 record.study_year,

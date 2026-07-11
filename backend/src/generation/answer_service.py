@@ -1,4 +1,4 @@
-﻿import os
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -7,6 +7,15 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from src.retrieval.retriever import Retriever
+from src.retrieval.curriculum_question_router import (
+    CurriculumQuestionRouter,
+)
+from src.retrieval.curriculum_retriever import (
+    CurriculumRetriever,
+)
+from src.retrieval.programme_entity_resolver import (
+    ProgrammeEntityResolver,
+)
 from src.processing.prospectus.seat_distribution_router import (
     SeatDistributionRouter,
 )
@@ -29,7 +38,15 @@ class RescueAnswerService:
         collection_name: str,
     ):
 
+        self.collection_name = collection_name
+
         self.retriever = Retriever(
+            collection_name=collection_name,
+        )
+
+        self.curriculum_router = CurriculumQuestionRouter()
+
+        self.curriculum_retriever = CurriculumRetriever(
             collection_name=collection_name,
         )
 
@@ -102,6 +119,14 @@ class RescueAnswerService:
 
         if seat_response is not None:
             return seat_response
+
+        curriculum_response = self._handle_curriculum_question(
+            question=question,
+            active_document=active_document,
+        )
+
+        if curriculum_response is not None:
+            return curriculum_response
 
         recent_history = (
             conversation_history or []
@@ -298,6 +323,18 @@ class RescueAnswerService:
             yield {
                 "type": "done",
                 "result": seat_response,
+            }
+            return
+
+        curriculum_response = self._handle_curriculum_question(
+            question=question,
+            active_document=active_document,
+        )
+
+        if curriculum_response is not None:
+            yield {
+                "type": "done",
+                "result": curriculum_response,
             }
             return
 
@@ -1522,6 +1559,265 @@ USER QUESTION:
                         "final_score",
                         chunk.get("score"),
                     ),
+                }
+            )
+
+            if len(sources) >= 5:
+                break
+
+        return sources
+
+
+    def _handle_curriculum_question(
+        self,
+        *,
+        question: str,
+        active_document: dict,
+    ) -> dict[str, Any] | None:
+
+        records_path = (
+            self.document_manager.storage_dir
+            / "processed"
+            / active_document["document_id"]
+            / "curriculum_records_v2.json"
+        )
+
+        if not records_path.exists():
+            return None
+
+        import json
+
+        payload = json.loads(
+            records_path.read_text(encoding="utf-8")
+        )
+
+        curriculum_records = payload.get(
+            "records",
+            payload,
+        )
+
+        programme_resolver = ProgrammeEntityResolver(
+            curriculum_records=curriculum_records,
+        )
+
+        programme_matches = programme_resolver.resolve(
+            question
+        )
+
+        route = self.curriculum_router.route(
+            question=question,
+            curriculum_records=curriculum_records,
+            programme_matches=programme_matches,
+        )
+
+        if route is None:
+            return None
+
+        if route["status"] == "programme_not_found":
+            return None
+
+        if route["status"] == "unsupported_study_year":
+            return {
+                "question": question,
+                "answer": (
+                    f"{route['programme_matches'][0]['programme']} "
+                    "does not have that study year in this prospectus. "
+                    "Its curriculum is listed for First Year, "
+                    "Second Year, Third Year, and Final Year."
+                ),
+                "status": "curriculum_not_found",
+                "sources": [],
+                "page_references": [],
+            }
+
+        if route["status"] == "programme_ambiguous":
+            options = []
+
+            for item in route["programme_matches"]:
+                sample = next(
+                    (
+                        record
+                        for record in curriculum_records
+                        if record.get("programme_code")
+                        == item["programme_code"]
+                    ),
+                    {},
+                )
+
+                label = item["programme"]
+
+                parent = str(
+                    sample.get("parent_section", "") or ""
+                ).strip()
+
+                if parent:
+                    label += f" ({parent})"
+
+                options.append(label)
+
+            return {
+                "question": question,
+                "answer": (
+                    "I found more than one matching programme. "
+                    "Please specify: "
+                    + "; ".join(options)
+                    + "."
+                ),
+                "status": "curriculum_ambiguous",
+                "sources": [],
+                "page_references": [],
+            }
+
+        curriculum_retriever = CurriculumRetriever(
+            collection_name=self.collection_name,
+            document_id=active_document["document_id"],
+        )
+
+        records = curriculum_retriever.retrieve(
+            programme_code=route["programme_code"],
+            study_year=route.get("study_year"),
+            semester=route.get("semester"),
+            course_code=route.get("course_code"),
+            limit=200,
+        )
+
+        if not records:
+            return None
+
+        return {
+            "question": question,
+            "answer": self._format_curriculum_answer(
+                route=route,
+                records=records,
+            ),
+            "status": "curriculum_answered",
+            "sources": self._build_curriculum_sources(records),
+            "page_references": [],
+        }
+
+
+    @staticmethod
+    def _format_curriculum_answer(
+        *,
+        route: dict,
+        records: list[dict],
+    ) -> str:
+
+        course_code = route.get("course_code")
+
+        if course_code:
+            record = records[0]
+
+            return (
+                f"{record.get('course_code')} ? "
+                f"{record.get('course_title')} has "
+                f"{record.get('total_credit_hours')} total "
+                f"credit hours "
+                f"(theory: {record.get('theory_hours')}, "
+                f"practical: {record.get('practical_hours')})."
+            )
+
+        parts = [route["programme"]]
+
+        if route.get("study_year"):
+            parts.append(route["study_year"].title())
+
+        if route.get("semester"):
+            parts.append(
+                f"{route['semester']} Semester"
+            )
+
+        lines = [" ? ".join(parts) + ":"]
+
+        if (
+            route.get("semester")
+            and not route.get("study_year")
+        ):
+            year_order = (
+                "FIRST YEAR",
+                "SECOND YEAR",
+                "THIRD YEAR",
+                "FINAL YEAR",
+            )
+
+            grouped = {}
+
+            for record in records:
+                year = str(
+                    record.get("study_year", "")
+                    or ""
+                ).strip()
+
+                grouped.setdefault(year, []).append(record)
+
+            ordered_years = [
+                year
+                for year in year_order
+                if year in grouped
+            ]
+
+            ordered_years.extend(
+                year
+                for year in grouped
+                if year not in ordered_years
+            )
+
+            for year in ordered_years:
+                if year:
+                    lines.append("")
+                    lines.append(f"{year.title()}:")
+
+                for record in grouped[year]:
+                    lines.append(
+                        f"- {record.get('course_code')}: "
+                        f"{record.get('course_title')} "
+                        f"({record.get('total_credit_hours')} "
+                        f"credit hours)"
+                    )
+
+            return "\n".join(lines)
+
+        for record in records:
+            lines.append(
+                f"- {record.get('course_code')}: "
+                f"{record.get('course_title')} "
+                f"({record.get('total_credit_hours')} "
+                f"credit hours)"
+            )
+
+        return "\n".join(lines)
+
+
+    @staticmethod
+    def _build_curriculum_sources(
+        records: list[dict],
+    ) -> list[dict]:
+
+        sources = []
+        seen = set()
+
+        for record in records:
+            page_number = record.get(
+                "page_number",
+                record.get("source_page"),
+            )
+
+            key = (
+                record.get("document"),
+                page_number,
+            )
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+
+            sources.append(
+                {
+                    "document": record.get("document"),
+                    "page_number": page_number,
+                    "heading": record.get("programme", ""),
+                    "score": None,
                 }
             )
 

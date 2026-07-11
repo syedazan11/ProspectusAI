@@ -312,6 +312,10 @@ def upload_document(
         )
 
     except Exception as error:
+        import traceback
+
+        traceback.print_exc()
+
         raise HTTPException(
             status_code=500,
             detail=str(error),
@@ -355,6 +359,10 @@ def process_document(
         ) from error
 
     except Exception as error:
+        import traceback
+
+        traceback.print_exc()
+
         raise HTTPException(
             status_code=500,
             detail=str(error),
