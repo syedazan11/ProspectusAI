@@ -5,13 +5,19 @@ from typing import Any
 
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient, models
-
+from dataclasses import dataclass
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 load_dotenv(
     PROJECT_ROOT / ".env"
 )
+
+@dataclass(frozen=True)
+class RetrievalIntent:
+    name: str
+    confidence: float
+
 
 
 class Retriever:
@@ -320,6 +326,16 @@ class Retriever:
                 continue
 
             candidate.update(ranking)
+
+            if candidate.get("page_number") in (104, 105):
+                print(
+                    f"PAGE={candidate.get('page_number')}",
+                    f"semantic={candidate['semantic_score']:.4f}",
+                    f"lexical={candidate['lexical_score']:.4f}",
+                    f"final={candidate['final_score']:.4f}",
+                    f"heading={candidate.get('heading','')}"
+                )
+
             candidates.append(candidate)
 
         candidates.sort(
@@ -330,9 +346,159 @@ class Retriever:
             reverse=True,
         )
 
+        print("\n" + "=" * 100)
+        print(f"QUERY: {query}")
+        print("=" * 100)
+
+        for index, candidate in enumerate(candidates[:20], start=1):
+
+            print(f"\n#{index}")
+
+            print(
+                f"Page        : {candidate.get('page_number')}"
+            )
+            print(
+                f"Heading     : {candidate.get('heading', '')}"
+            )
+
+            print(
+                f"Chunk ID    : {candidate.get('chunk_id')}"
+            )
+
+            print(
+                f"Semantic    : {candidate['semantic_score']:.4f}"
+            )
+
+            print(
+                f"Lexical     : {candidate['lexical_score']:.4f}"
+            )
+
+            print(
+                f"Final       : {candidate['final_score']:.4f}"
+            )
+
+            print(
+                f"Coverage    : {candidate.get('term_coverage', 0):.2f}"
+            )
+
+            print(
+                f"Heading Cov : {candidate.get('heading_coverage', 0):.2f}"
+            )
+
+            print(
+                "-" * 100
+            )
+
         return self._diversify(
             candidates=candidates,
             top_k=top_k,
+        )
+
+    def _detect_intent(
+        self,
+        query: str,
+    ) -> RetrievalIntent:
+
+        query = query.casefold()
+
+        intent_keywords = {
+            "fee": {
+                "fee",
+                "fees",
+                "tuition",
+                "payment",
+                "payments",
+                "charges",
+                "refund",
+            },
+            "deadline": {
+                "deadline",
+                "last date",
+                "closing date",
+                "apply",
+                "application",
+                "submission",
+            },
+            "admission": {
+                "admission",
+                "admissions",
+                "admit",
+                "enrollment",
+                "enrolment",
+            },
+            "eligibility": {
+                "eligibility",
+                "eligible",
+                "requirement",
+                "requirements",
+                "criteria",
+                "qualification",
+            },
+            "hostel": {
+                "hostel",
+                "hostels",
+                "accommodation",
+            },
+            "curriculum": {
+                "curriculum",
+                "course",
+                "courses",
+                "syllabus",
+                "semester",
+            },
+            "migration": {
+                "migration",
+                "migrate",
+                "transfer",
+            },
+            "seat": {
+                "seat",
+                "seats",
+                "regular",
+                "self finance",
+                "self-finance",
+            },
+            "people": {
+                "chairperson",
+                "dean",
+                "director",
+                "professor",
+                "hod",
+                "head",
+            },
+            "department": {
+                "department",
+                "faculty",
+                "school",
+            },
+            "abbreviation": {
+                "meaning",
+                "stands for",
+                "abbreviation",
+                "full form",
+            },
+            "facilities": {
+                "library",
+                "sport",
+                "sports",
+                "laboratory",
+                "lab",
+                "transport",
+                "cafeteria",
+            },
+        }
+
+        for intent, keywords in intent_keywords.items():
+            for keyword in keywords:
+                if keyword in query:
+                    return RetrievalIntent(
+                        name=intent,
+                        confidence=1.0,
+                    )
+
+        return RetrievalIntent(
+            name="general",
+            confidence=0.5,
         )
 
     def _rank_chunk(
@@ -487,7 +653,7 @@ class Retriever:
             ),
             "final_score": final_score,
         }
-
+    
     def _query_terms(
         self,
         query: str,

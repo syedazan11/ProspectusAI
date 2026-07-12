@@ -153,9 +153,14 @@ class RescueAnswerService:
                 question
             )
 
-        chunks = self._expand_retrieved_context(
-            chunks
-        )
+        # Gate 89:
+        # Do not collapse retrieval to a single heading.
+        # Preserve all retrieved evidence for answer generation.
+        #
+        # The focused expansion logic is retained in
+        # _expand_retrieved_context() for future selective use
+        # (e.g. follow-up questions), but is intentionally
+        # bypassed for normal QA.
 
         # A relevant page may be split into a
         # heading chunk and a separate table chunk.
@@ -230,11 +235,15 @@ class RescueAnswerService:
             conversation_history=recent_history,
         )
 
+        
         answer = self._call_groq(
             prompt=prompt,
             max_tokens=650,
         )
 
+        print("[GROQ ANSWER]")
+        print(answer)
+        
         if self._is_abstention(answer):
 
             return self._not_found(
@@ -365,10 +374,6 @@ class RescueAnswerService:
             }
             return
 
-        chunks = self._expand_retrieved_context(
-            chunks
-        )
-
         # A relevant page may be split into a
         # heading chunk and a separate table chunk.
         # Fetch complex-table companions from the
@@ -441,7 +446,6 @@ class RescueAnswerService:
             ),
             conversation_history=recent_history,
         )
-
         answer_parts = []
 
         for token in self._stream_groq(
@@ -977,6 +981,7 @@ USER QUESTION:
         return content.strip()
 
 
+    
     def _expand_retrieved_context(
         self,
         chunks: list[dict[str, Any]],
@@ -985,81 +990,64 @@ USER QUESTION:
         if not chunks:
             return []
 
-        def normalized_heading(
-            chunk: dict[str, Any],
-        ) -> str:
+        expanded=[]
+        seen=set()
 
-            return " ".join(
-                str(
-                    chunk.get("heading", "")
-                ).casefold().split()
-            )
+        def add(chunk):
 
-        focus_chunk = next(
-            (
-                chunk
-                for chunk in chunks
-                if normalized_heading(chunk)
-            ),
-            chunks[0],
-        )
+            cid=chunk.get("chunk_id")
 
-        focus_heading = normalized_heading(
-            focus_chunk
-        )
-        focus_page = focus_chunk.get(
-            "page_number"
-        )
-
-        def is_focus_chunk(
-            chunk: dict[str, Any],
-        ) -> bool:
-
-            if focus_heading:
-                return (
-                    normalized_heading(chunk)
-                    == focus_heading
-                )
-
-            if focus_page is None:
-                return chunk is focus_chunk
-
-            return (
-                chunk.get("page_number")
-                == focus_page
-            )
-
-        companions = [
-            chunk
-            for chunk in self.retriever._all_chunks()
-            if is_focus_chunk(chunk)
-        ]
-
-        expanded = []
-        seen_chunk_ids = set()
-
-        def add_chunk(
-            chunk: dict[str, Any],
-        ) -> None:
-
-            chunk_id = chunk.get("chunk_id")
-
-            if chunk_id in seen_chunk_ids:
+            if cid in seen:
                 return
 
             expanded.append(chunk)
 
-            if chunk_id is not None:
-                seen_chunk_ids.add(chunk_id)
+            if cid is not None:
+                seen.add(cid)
 
+        # Preserve every retrieved chunk.
         for chunk in chunks:
-            if is_focus_chunk(chunk):
-                add_chunk(chunk)
+            add(chunk)
 
-        for companion in companions:
-            add_chunk(companion)
+        # Only expand from specific headings.
+        for chunk in list(expanded):
+
+            heading=str(
+                chunk.get(
+                    "heading",
+                    ""
+                )
+            ).strip()
+
+            if (
+                not heading
+                or heading.casefold()=="prospectus 2026"
+            ):
+                continue
+
+            page=chunk.get("page_number")
+
+            if page is None:
+                continue
+
+            added=0
+
+            for companion in self.retriever._all_chunks():
+
+                if (
+                    companion.get("page_number")!=page
+                ):
+                    continue
+
+                add(companion)
+
+                added+=1
+
+                if added>=3:
+                    break
 
         return expanded
+
 
 
     def _build_context(
@@ -1126,6 +1114,17 @@ USER QUESTION:
                 or 0.0
             )
 
+            generic_headings = {
+                "prospectus 2026",
+                "general guidance",
+                "of engineering & technology",
+                "the faculties",
+            }
+
+            if heading.strip() in generic_headings:
+                heading_matches -= 100
+                matched_terms -= 100
+
             return (
                 matched_terms,
                 heading_matches,
@@ -1138,19 +1137,10 @@ USER QUESTION:
         )
 
         selected = []
-
-        # Keep complete table chunks.
-        # Maximum two relevant tables prevents
-        # token overflow while preserving rows.
-        selected.extend(
-            table_chunks[:2]
-        )
-
-        # Add small supporting context for names,
-        # abbreviations and section meaning.
-        selected.extend(
-            normal_chunks[:4]
-        )
+        print("[BUILD_CONTEXT SELECTED]")
+        print("selected =", len(selected))
+        for i, c in enumerate(selected, 1):
+            print(i, c.get("page_number"), c.get("heading"))
 
         sections = []
 
