@@ -264,6 +264,13 @@ class Retriever:
 
         query = query.strip()
 
+        intent = self._detect_intent(query)
+
+        print(
+            f"[INTENT] {intent.name} "
+            f"(confidence={intent.confidence:.2f})"
+        )
+
         if not query:
             return []
 
@@ -317,6 +324,7 @@ class Retriever:
                 query_codes=query_codes,
                 chunk=candidate,
                 semantic_score=semantic_score,
+                intent=intent,
             )
 
             if (
@@ -500,6 +508,129 @@ class Retriever:
             name="general",
             confidence=0.5,
         )
+    
+    def _heading_policy(
+        self,
+        intent: RetrievalIntent,
+    ) -> dict[str, tuple[str, ...]]:
+        """
+        Returns heading boost and penalty terms for the detected intent.
+
+        This controls retrieval behaviour without hardcoding answers,
+        pages, years, or document structure.
+        """
+
+        policies = {
+
+            "fee": {
+                "boost": (
+                    "admission fee",
+                    "fee",
+                    "fees",
+                    "charges",
+                    "payment",
+                ),
+                "penalty": (
+                    "refund",
+                ),
+            },
+
+            "deadline": {
+                "boost": (
+                    "admission",
+                    "application",
+                    "schedule",
+                    "important dates",
+                    "last date",
+                ),
+                "penalty": (),
+            },
+
+            "eligibility": {
+                "boost": (
+                    "eligibility",
+                    "criteria",
+                    "requirements",
+                    "qualification",
+                ),
+                "penalty": (),
+            },
+
+            "hostel": {
+                "boost": (
+                    "hostel",
+                    "accommodation",
+                ),
+                "penalty": (),
+            },
+
+            "seat": {
+                "boost": (
+                    "seat",
+                    "seat distribution",
+                    "regular",
+                    "self finance",
+                ),
+                "penalty": (),
+            },
+
+            "curriculum": {
+                "boost": (
+                    "curriculum",
+                    "course",
+                    "semester",
+                ),
+                "penalty": (),
+            },
+
+            "people": {
+                "boost": (
+                    "chairperson",
+                    "dean",
+                    "director",
+                    "faculty",
+                ),
+                "penalty": (),
+            },
+
+            "department": {
+                "boost": (
+                    "department",
+                    "faculty",
+                ),
+                "penalty": (),
+            },
+
+            "abbreviation": {
+                "boost": (
+                    "abbreviation",
+                    "stands for",
+                    "full form",
+                ),
+                "penalty": (),
+            },
+
+            "facilities": {
+                "boost": (
+                    "library",
+                    "hostel",
+                    "sports",
+                    "laboratory",
+                ),
+                "penalty": (),
+            },
+
+            "general": {
+                "boost": (),
+                "penalty": (),
+            },
+        }
+
+        return policies.get(
+            intent.name,
+            policies["general"],
+        )
+
 
     def _rank_chunk(
         self,
@@ -509,40 +640,27 @@ class Retriever:
         query_codes: list[str],
         chunk: dict[str, Any],
         semantic_score: float,
+        intent: RetrievalIntent,
     ) -> dict[str, float]:
 
-        heading = str(
-            chunk.get("heading", "")
-        )
-
-        content = str(
-            chunk.get("content", "")
-        )
+        heading = str(chunk.get("heading", ""))
+        content = str(chunk.get("content", ""))
 
         heading_folded = heading.casefold()
         content_folded = content.casefold()
 
-        searchable = (
-            f"{heading_folded}\n"
-            f"{content_folded}"
-        )
+        searchable = f"{heading_folded}\n{content_folded}"
 
         matched_terms = [
             term
             for term in query_terms
-            if self._contains_term(
-                searchable,
-                term,
-            )
+            if self._contains_term(searchable, term)
         ]
 
         heading_matches = [
             term
             for term in query_terms
-            if self._contains_term(
-                heading_folded,
-                term,
-            )
+            if self._contains_term(heading_folded, term)
         ]
 
         phrase_matches = [
@@ -554,89 +672,63 @@ class Retriever:
         code_matches = [
             code
             for code in query_codes
-            if self._contains_code(
-                f"{heading}\n{content}",
-                code,
-            )
+            if self._contains_code(f"{heading}\n{content}", code)
         ]
 
-        total_query_weight = sum(
-            self._term_weight(term)
-            for term in query_terms
-        )
+        total_query_weight = sum(self._term_weight(term) for term in query_terms)
+        matched_query_weight = sum(self._term_weight(term) for term in matched_terms)
+        heading_query_weight = sum(self._term_weight(term) for term in heading_matches)
 
-        matched_query_weight = sum(
-            self._term_weight(term)
-            for term in matched_terms
-        )
-
-        heading_query_weight = sum(
-            self._term_weight(term)
-            for term in heading_matches
-        )
-
-        term_coverage = (
-            matched_query_weight
-            / max(total_query_weight, 1.0)
-        )
-
-        heading_coverage = (
-            heading_query_weight
-            / max(total_query_weight, 1.0)
-        )
+        term_coverage = matched_query_weight / max(total_query_weight, 1.0)
+        heading_coverage = heading_query_weight / max(total_query_weight, 1.0)
 
         lexical_score = 0.0
 
         lexical_score += term_coverage * 12.0
         lexical_score += heading_coverage * 12.0
 
-        lexical_score += min(
-            matched_query_weight,
-            18.0,
-        )
+        lexical_score += min(matched_query_weight, 18.0)
         lexical_score += len(phrase_matches) * 4.0
         lexical_score += len(code_matches) * 6.0
 
-        if (
-            len(query_terms) >= 2
-            and term_coverage >= 0.80
-        ):
+        if len(query_terms) >= 2 and term_coverage >= 0.80:
             lexical_score += 6.0
 
-        if (
-            len(query_terms) >= 3
-            and term_coverage >= 1.0
-        ):
+        if len(query_terms) >= 3 and term_coverage >= 1.0:
             lexical_score += 5.0
 
-        is_table = bool(
-            chunk.get(
-                "is_complex_table",
-                False,
-            )
-        )
+        is_table = bool(chunk.get("is_complex_table", False))
 
-        if (
-            is_table
-            and term_coverage >= 0.60
-        ):
+        if is_table and term_coverage >= 0.60:
             lexical_score += 2.0
 
-        if (
-            len(content) > 8000
-            and term_coverage < 0.50
-        ):
+        if len(content) > 8000 and term_coverage < 0.50:
             lexical_score -= 4.0
 
-        if self._looks_like_contents(
-            heading=heading,
-            content=content,
-        ):
+        if self._looks_like_contents(heading=heading, content=content):
             lexical_score -= 5.0
+
+        heading_score = self._heading_score(
+            intent=intent, heading=heading, content=content, chunk=chunk
+        )
+
+        intent_score = self._intent_score(
+            intent=intent, heading=heading, content=content, chunk=chunk
+        )
+
+        entity_score = self._entity_score(
+            query=query, heading=heading, content=content, chunk=chunk
+        )
+
+        page_score = self._page_score(chunk=chunk)
 
         final_score = (
             lexical_score
             + (semantic_score * 6.0)
+            + heading_score
+            + intent_score
+            + entity_score
+            + page_score
         )
 
         return {
@@ -645,48 +737,80 @@ class Retriever:
             "lexical_score": lexical_score,
             "term_coverage": term_coverage,
             "heading_coverage": heading_coverage,
-            "phrase_matches": float(
-                len(phrase_matches)
-            ),
-            "code_matches": float(
-                len(code_matches)
-            ),
+            "phrase_matches": float(len(phrase_matches)),
+            "code_matches": float(len(code_matches)),
             "final_score": final_score,
         }
-    
-    def _query_terms(
+
+    def _heading_score(
         self,
-        query: str,
-    ) -> list[str]:
+        *,
+        intent: RetrievalIntent,
+        heading: str,
+        content: str,
+        chunk: dict[str, Any],
+    ) -> float:
+        """
+        Scores heading relevance using heading plus the beginning of
+        the section text.
+        """
 
+        policy = self._heading_policy(intent)
+
+        heading_text = heading.casefold()
+        preview = content[:300].casefold()
+
+        searchable = f"{heading_text}\n{preview}"
+
+        score = 0.0
+
+        # Positive boosts
+        for term in policy["boost"]:
+
+            term = term.casefold()
+
+            if term in heading_text:
+                score += 4.0
+
+            elif term in searchable:
+                score += 2.0
+
+        # Penalties
+        for term in policy["penalty"]:
+
+            term = term.casefold()
+
+            if term in heading_text:
+                score -= 3.0
+
+            elif term in searchable:
+                score -= 1.5
+
+        return score
+
+    def _intent_score(
+        self, *, intent: RetrievalIntent, heading: str, content: str, chunk: dict[str, Any]
+    ) -> float:
+        return 0.0
+
+    def _entity_score(
+        self, *, query: str, heading: str, content: str, chunk: dict[str, Any]
+    ) -> float:
+        return 0.0
+
+    def _page_score(self, *, chunk: dict[str, Any]) -> float:
+        return 0.0
+
+    def _query_terms(self, query: str) -> list[str]:
         terms = []
-
-        for token in re.findall(
-            r"[A-Za-z0-9]+",
-            query.casefold(),
-        ):
-
-            if len(token) <= 1:
+        for token in re.findall(r"[A-Za-z0-9]+", query.casefold()):
+            if len(token) <= 1 or token in self.STOP_WORDS:
                 continue
-
-            if token in self.STOP_WORDS:
-                continue
-
-            if (
-                token.endswith("ies")
-                and len(token) > 4
-            ):
+            if token.endswith("ies") and len(token) > 4:
                 token = token[:-3] + "y"
-
-            elif (
-                token.endswith("s")
-                and not token.endswith("ss")
-                and len(token) > 3
-            ):
+            elif token.endswith("s") and not token.endswith("ss") and len(token) > 3:
                 token = token[:-1]
-
             terms.append(token)
-
         return list(dict.fromkeys(terms))
 
     def _query_phrases(

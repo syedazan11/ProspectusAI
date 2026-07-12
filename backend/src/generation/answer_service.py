@@ -1137,10 +1137,26 @@ USER QUESTION:
         )
 
         selected = []
+
+        selected.extend(
+            table_chunks[:2]
+        )
+
+        selected.extend(
+            normal_chunks[:4]
+        )
+
+        print("=" * 80)
         print("[BUILD_CONTEXT SELECTED]")
         print("selected =", len(selected))
+
         for i, c in enumerate(selected, 1):
-            print(i, c.get("page_number"), c.get("heading"))
+            print(
+                i,
+                c.get("page_number"),
+                c.get("heading"),
+                c.get("final_score"),
+            )
 
         sections = []
 
