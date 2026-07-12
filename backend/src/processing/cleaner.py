@@ -52,9 +52,14 @@ class DocumentCleaner:
                     headings.append(line)
 
                     if current_heading is not None:
+                        metadata = self._heading_metadata(current_heading)
+
                         sections.append(
                             {
                                 "heading": current_heading,
+                                "heading_number": metadata["heading_number"],
+                                "heading_level": metadata["heading_level"],
+                                "heading_title": metadata["heading_title"],
                                 "content": current_content,
                             }
                         )
@@ -84,9 +89,15 @@ class DocumentCleaner:
 
             # Finalize the last section
             if current_heading is not None:
+
+                metadata = self._heading_metadata(current_heading)
+
                 sections.append(
                     {
                         "heading": current_heading,
+                        "heading_number": metadata["heading_number"],
+                        "heading_level": metadata["heading_level"],
+                        "heading_title": metadata["heading_title"],
                         "content": current_content,
                     }
                 )
@@ -177,9 +188,15 @@ class DocumentCleaner:
             cleaned_lines.append(line)
 
         return "\n".join(cleaned_lines)
+
     def _is_heading(self, line: str) -> bool:
         """
-        Returns True if a line is likely a real heading.
+        Returns True if a line is likely a document heading.
+
+        Supports:
+        - Traditional uppercase headings
+        - Numbered headings (4.2 Eligibility Conditions)
+        - Multi-level numbered headings (8.1.1 For Main Campus)
         """
 
         line = line.strip()
@@ -187,36 +204,95 @@ class DocumentCleaner:
         if not line:
             return False
 
-        # Too short
-        if len(line) < 4:
-            return False
-
-        # Too long
-        if len(line) > 80:
-            return False
-
-        # Must mostly be uppercase
-        if not line.isupper():
-            return False
-
         # Ignore URLs
         if "www." in line.lower():
             return False
 
-        # Must contain at least two words
-        if len(line.split()) < 2:
+        # Length sanity checks
+        if len(line) < 4 or len(line) > 120:
             return False
 
-        # Reject headings with too many digits
-        digits = sum(c.isdigit() for c in line)
-
-        if digits > len(line) * 0.3:
-            return False
-
-        # Must contain letters
+        # Must contain enough letters
         letters = sum(c.isalpha() for c in line)
 
         if letters < 5:
             return False
 
-        return True
+        # Reject lines dominated by digits
+        digits = sum(c.isdigit() for c in line)
+
+        if digits > len(line) * 0.35:
+            return False
+
+        words = line.split()
+
+        # -------------------------
+        # Existing uppercase headings
+        # -------------------------
+
+        if line.isupper():
+
+            if len(words) < 2:
+                return False
+
+            return True
+
+        # -------------------------
+        # Generic numbered headings
+        # -------------------------
+
+        match = re.match(
+            r"^\d+(?:\.\d+)*\.?\s+(.+)$",
+            line,
+        )
+
+        if match:
+
+            title = match.group(1).strip()
+
+            if len(title.split()) < 2:
+                return False
+
+            # Title shouldn't be mostly numbers
+            title_letters = sum(
+                c.isalpha()
+                for c in title
+            )
+
+            if title_letters < 5:
+                return False
+
+            return True
+
+        return False
+    
+    def _heading_metadata(self, heading: str) -> dict:
+        """
+        Extract generic metadata from a heading.
+
+        Examples:
+            8.1 Fee Structure
+            8.1.1 Main Campus
+            CHAPTER 4
+        """
+
+        match = re.match(
+            r"^(?P<number>\d+(?:\.\d+)*)\.?\s*(?P<title>.*)$",
+            heading.strip(),
+        )
+
+        if match:
+            number = match.group("number")
+            title = match.group("title").strip()
+
+            return {
+                "heading_number": number,
+                "heading_level": number.count(".") + 1,
+                "heading_title": title,
+            }
+
+        return {
+            "heading_number": "",
+            "heading_level": 1,
+            "heading_title": heading.strip(),
+        }
