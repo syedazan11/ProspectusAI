@@ -278,21 +278,35 @@ class Retriever:
         query_phrases = self._query_phrases(query)
         query_codes = self._query_codes(query)
 
-        semantic_results = (
-            self.client.query_points(
-                collection_name=self.collection_name,
-                query=models.Document(
-                    text=query,
-                    model=self.MODEL,
-                ),
-                limit=max(
-                    top_k * 8,
-                    60,
-                ),
-                with_payload=True,
-            ).points
-        )
+        # 1. Close the query_points call here
+        semantic_results = self.client.query_points(
+            collection_name=self.collection_name,
+            query=models.Document(
+                text=query,
+                model=self.MODEL,
+            ),
+            limit=max(
+                top_k * 8,
+                60,
+            ),
+            with_payload=True,
+        ).points
 
+        # 2. Print logic now exists independently of the assignment
+        print("\n========== SEMANTIC RESULTS ==========")
+
+        for i, result in enumerate(semantic_results[:20], 1):
+            payload = result.payload or {}
+
+            print(
+                i,
+                f"score={result.score:.4f}",
+                payload.get("page_number"),
+                payload.get("heading"),
+                payload.get("chunk_id"),
+            )
+
+        print("=====================================\n")
         semantic_by_id = {}
 
         for result in semantic_results:
@@ -353,6 +367,18 @@ class Retriever:
             ),
             reverse=True,
         )
+
+        # Debug: print top 15 ranked chunks (rank, final_score, page_number, heading, parent_heading, first 150 chars)
+        print("\n--- Debug Top 15 Chunks ---")
+        for rank, candidate in enumerate(candidates[:15], start=1):
+            print(f"Rank: {rank}")
+            print(f"final_score   : {candidate.get('final_score'):.4f}")
+            print(f"page_number   : {candidate.get('page_number')}")
+            print(f"heading       : {candidate.get('heading')}")
+            print(f"parent_heading: {candidate.get('parent_heading')}")
+            content_preview = str(candidate.get('content', ''))[:150].replace('\n', ' ')
+            print(f"content preview: {content_preview}")
+            print("-")
 
         print("\n" + "=" * 100)
         print(f"QUERY: {query}")
@@ -722,13 +748,32 @@ class Retriever:
 
         page_score = self._page_score(chunk=chunk)
 
+        # Apply boilerplate/footer/header penalty if detected
+        boilerplate_penalty = 0.0
+        if self._is_boilerplate(chunk):
+            # Heavy negative impact to push these chunks down
+            boilerplate_penalty = -8.0
+
+        # Cap lexical contribution to prevent domination over semantics
+        # Maximum lexical score allowed (tuned to keep semantics primary)
+        max_lexical = 25.0
+        capped_lexical = min(lexical_score, max_lexical)
+
+        # Increase heading relevance for intent‑specific sections
+        # Apply a multiplier to heading_score when the intent matches a boost term
+        heading_multiplier = 1.0
+        if intent.name != "general" and heading_score > 0:
+            # Intent‑specific headings get a 2× boost
+            heading_multiplier = 2.0
+
         final_score = (
-            lexical_score
+            capped_lexical
             + (semantic_score * 6.0)
-            + heading_score
+            + (heading_score * heading_multiplier)
             + intent_score
             + entity_score
             + page_score
+            + boilerplate_penalty
         )
 
         return {
@@ -914,6 +959,34 @@ class Retriever:
         return (
             numbered_lines >= 12
             and len(content) < 6000
+        )
+
+    def _is_boilerplate(self, chunk: dict[str, Any]) -> bool:
+        """
+        Detect obvious page headers/footers only.
+        Never classify a chunk as boilerplate merely because
+        its content mentions NED University or Prospectus.
+        """
+
+        heading = str(chunk.get("heading", "")).casefold().strip()
+
+        parent = str(
+            chunk.get("parent_heading", "")
+        ).casefold().strip()
+
+        text = f"{heading}\n{parent}"
+
+        boilerplate_phrases = (
+            "prospectus 2026",
+            "prospectus 2025",
+            "of engineering & technology",
+            "of engineering and technology",
+        )
+
+        return any(
+            phrase == heading
+            or phrase == parent
+            for phrase in boilerplate_phrases
         )
 
     def _diversify(

@@ -1155,6 +1155,7 @@ USER QUESTION:
                 i,
                 c.get("page_number"),
                 c.get("heading"),
+                c.get("parent_chunk_id"),
                 c.get("final_score"),
             )
 

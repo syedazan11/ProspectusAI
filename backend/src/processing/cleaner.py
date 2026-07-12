@@ -21,6 +21,17 @@ class DocumentCleaner:
 
             cleaned_text = self._clean_text(page["markdown"])
 
+            if page["page_number"] == 104:
+                print("\n" + "=" * 80)
+                print("RAW PAGE 104")
+                print("=" * 80)
+                print(page["markdown"])
+
+                print("\n" + "=" * 80)
+                print("CLEANED PAGE 104")
+                print("=" * 80)
+                print(cleaned_text)
+
             headings = []
             paragraphs = []
             lists = []
