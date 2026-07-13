@@ -5,6 +5,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient, models
+from src.core.qdrant_client import get_qdrant_client
 from dataclasses import dataclass
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -50,16 +51,7 @@ class Retriever:
 
         self.collection_name = collection_name
 
-        self.client = QdrantClient(
-            url=os.getenv("QDRANT_HOST"),
-            api_key=os.getenv(
-                "QDRANT_API_KEY"
-            ),
-            cloud_inference=True,
-            timeout=180,
-            check_compatibility=False,
-        )
-
+        self.client = get_qdrant_client()
         self._all_chunks_cache = None
         self._page_context_cache = None
         self._term_document_frequency_cache = None
@@ -839,9 +831,30 @@ class Retriever:
         return 0.0
 
     def _entity_score(
-        self, *, query: str, heading: str, content: str, chunk: dict[str, Any]
+        self,
+        *,
+        query: str,
+        heading: str,
+        content: str,
+        chunk: dict[str, Any],
     ) -> float:
-        return 0.0
+        """
+        Rewards chunks whose heading contains important
+        query entities.
+
+        Completely generic.
+        """
+        score = 0.0
+        heading = heading.casefold()
+        query_terms = self._query_terms(query)
+        for term in query_terms:
+            if self._contains_term(
+                heading,
+                term,
+            ):
+                score += 2.5
+
+        return score
 
     def _page_score(self, *, chunk: dict[str, Any]) -> float:
         return 0.0

@@ -6,8 +6,7 @@ import shutil
 from typing import Any
 
 from dotenv import load_dotenv
-from qdrant_client import QdrantClient
-
+from src.core.qdrant_client import get_qdrant_client
 
 class DocumentManager:
     """
@@ -475,16 +474,7 @@ class DocumentManager:
                     / ".env"
                 )
 
-                qdrant = QdrantClient(
-                    url=os.getenv(
-                        "QDRANT_HOST"
-                    ),
-                    api_key=os.getenv(
-                        "QDRANT_API_KEY"
-                    ),
-                    timeout=180,
-                    check_compatibility=False,
-                )
+                qdrant = get_qdrant_client()
 
                 if qdrant.collection_exists(
                     collection_name

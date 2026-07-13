@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from qdrant_client import QdrantClient
+from src.core.qdrant_client import get_qdrant_client
 from qdrant_client.models import (
     Distance,
     VectorParams,
@@ -33,34 +33,7 @@ class QdrantStore:
 
         self.vector_size = vector_size
 
-        qdrant_host = os.getenv("QDRANT_HOST")
-        qdrant_port = os.getenv("QDRANT_PORT")
-        qdrant_api_key = os.getenv(
-            "QDRANT_API_KEY"
-        )
-
-        if not qdrant_host:
-            raise ValueError(
-                "QDRANT_HOST is not configured."
-            )
-
-        if qdrant_host.startswith(
-            ("http://", "https://")
-        ):
-            self.client = QdrantClient(
-                url=qdrant_host,
-                api_key=qdrant_api_key,
-                timeout=300,
-            )
-        else:
-            self.client = QdrantClient(
-                host=qdrant_host,
-                port=int(
-                    qdrant_port or "6333"
-                ),
-                api_key=qdrant_api_key,
-                timeout=300,
-            )
+        self.client = get_qdrant_client()
 
         self.collection_name = (
             collection_name
