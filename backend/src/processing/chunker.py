@@ -80,6 +80,18 @@ class DocumentChunker:
                 valid_sections.append(
                     {
                         "heading": heading,
+                        "heading_number": section.get(
+                            "heading_number",
+                            "",
+                        ),
+                        "heading_level": section.get(
+                            "heading_level",
+                            0,
+                        ),
+                        "heading_title": section.get(
+                            "heading_title",
+                            heading,
+                        ),
                         "content": content,
                     }
                 )
@@ -112,6 +124,18 @@ class DocumentChunker:
                     ParentChunk(
                         chunk_id=parent_id,
                         heading=heading,
+                        heading_number=section.get(
+                            "heading_number",
+                            "",
+                        ),
+                        heading_level=section.get(
+                            "heading_level",
+                            0,
+                        ),
+                        heading_title=section.get(
+                            "heading_title",
+                            heading,
+                        ),
                         page_number=page["page_number"],
                         content=content,
                         metadata={
@@ -155,6 +179,18 @@ class DocumentChunker:
                                 page["page_number"]
                             ),
                             heading=heading,
+                            heading_number=section.get(
+                                "heading_number",
+                                "",
+                            ),
+                            heading_level=section.get(
+                                "heading_level",
+                                0,
+                            ),
+                            heading_title=section.get(
+                                "heading_title",
+                                heading,
+                            ),
                             content=chunk_text,
                             metadata={
                                 "document": (

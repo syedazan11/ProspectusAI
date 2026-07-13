@@ -95,6 +95,15 @@ class Indexer:
                             "heading": (
                                 chunk.get("heading")
                             ),
+                            "heading_number": (
+                                chunk.get("heading_number")
+                            ),
+                            "heading_level": (
+                                chunk.get("heading_level")
+                            ),
+                            "heading_title": (
+                                chunk.get("heading_title")
+                            ),
                             "chunk_id": (
                                 chunk["chunk_id"]
                             ),

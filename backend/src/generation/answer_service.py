@@ -1138,13 +1138,58 @@ USER QUESTION:
 
         selected = []
 
-        selected.extend(
-            table_chunks[:2]
-        )
 
-        selected.extend(
-            normal_chunks[:4]
-        )
+# Keep up to two relevant table chunks first.
+
+        selected.extend(table_chunks[:2])
+# Focus normal chunks around the highest-ranked evidence instead of
+# mixing unrelated sections.
+        if normal_chunks:
+
+            primary = normal_chunks[0]
+
+            selected.append(primary)
+
+            primary_page = primary.get("page_number")
+            primary_heading = (
+                primary.get("heading") or ""
+            ).casefold()
+
+            for chunk in normal_chunks[1:]:
+
+                if len(selected) >= 5:
+                    break
+
+                same_page = (
+                    chunk.get("page_number")
+                    == primary_page
+                )
+
+                heading = (
+                    chunk.get("heading") or ""
+                ).casefold()
+
+                same_heading = (
+                    heading == primary_heading
+                    or primary_heading in heading
+                    or heading in primary_heading
+                )
+
+                if same_page or same_heading:
+                    selected.append(chunk)
+
+    # Still not enough?
+            if len(selected) < 5:
+
+                for chunk in normal_chunks[1:]:
+
+                    if chunk in selected:
+                        continue
+
+                    selected.append(chunk)
+
+                    if len(selected) >= 5:
+                        break
 
         print("=" * 80)
         print("[BUILD_CONTEXT SELECTED]")
@@ -1158,6 +1203,12 @@ USER QUESTION:
                 c.get("parent_chunk_id"),
                 c.get("final_score"),
             )
+
+        analysis = self._analyze_context(selected)
+
+        print("\n[CONTEXT ANALYSIS]")
+        for key, value in analysis.items():
+            print(f"{key}: {value}")
 
         sections = []
 
@@ -1201,17 +1252,16 @@ USER QUESTION:
                     max_length=1000,
                 )
 
+            heading_number = chunk.get("heading_number") or ""
+            heading_level = chunk.get("heading_level") or ""
+
             sections.append(
                 "\n".join(
                     [
-                        (
-                            f"[PDF PAGE "
-                            f"{page_number}]"
-                        ),
-                        (
-                            f"HEADING: "
-                            f"{heading}"
-                        ),
+                        f"[PDF PAGE {page_number}]",
+                        f"HEADING: {heading}",
+                        f"HEADING NUMBER: {heading_number}",
+                        f"HEADING LEVEL: {heading_level}",
                         final_content,
                     ]
                 )
@@ -1220,6 +1270,83 @@ USER QUESTION:
         return "\n\n---\n\n".join(
             sections
         )
+    
+    def _analyze_context(
+        self,
+        selected_chunks: list[dict],
+    ) -> dict:
+        """
+        Analyze retrieved context before sending it to the LLM.
+
+        Returns generic signals describing whether the context
+        appears focused or ambiguous.
+        """
+
+        headings = []
+        heading_numbers = []
+        heading_levels = []
+        pages = set()
+        scores = []
+
+        for chunk in selected_chunks:
+
+            heading = (chunk.get("heading") or "").strip()
+            if heading:
+                headings.append(heading)
+
+            number = (chunk.get("heading_number") or "").strip()
+            if number:
+                heading_numbers.append(number)
+
+            level = chunk.get("heading_level")
+            if level is not None:
+                heading_levels.append(level)
+
+            page = chunk.get("page_number")
+            if page is not None:
+                pages.add(page)
+
+            scores.append(
+                float(chunk.get("final_score", 0.0))
+            )
+
+        unique_headings = len(set(headings))
+
+        top_level_groups = set()
+
+        for number in heading_numbers:
+
+            top = number.split(".")[0]
+
+            top_level_groups.add(top)
+
+        is_ambiguous = (
+            len(top_level_groups) >= 3
+            or (
+                unique_headings >= 4
+                and len(top_level_groups) >= 2
+            )
+        )
+
+        highest_score = max(scores) if scores else 0.0
+        lowest_score = min(scores) if scores else 0.0
+        score_gap = highest_score - lowest_score
+
+        return {
+            "is_ambiguous": is_ambiguous,
+            "reason": (
+                "multiple independent sections"
+                if is_ambiguous
+                else "focused context"
+            ),
+            "unique_headings": unique_headings,
+            "heading_numbers": heading_numbers,
+            "top_level_groups": sorted(top_level_groups),
+            "page_count": len(pages),
+            "highest_score": highest_score,
+            "lowest_score": lowest_score,
+            "score_gap": score_gap,
+        }
 
 
     def _context_terms(

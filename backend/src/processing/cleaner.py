@@ -270,6 +270,10 @@ class DocumentCleaner:
             heading.strip(),
         )
 
+        print("=" * 80)
+        print("HEADING:", repr(heading))
+        print("MATCH:", bool(match))
+
         if match:
             number = match.group("number")
             title = match.group("title").strip()
