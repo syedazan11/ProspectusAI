@@ -7,6 +7,9 @@ from src.schemas.chunk import (
     ParentChunk,
     ChildChunk,
 )
+from src.processing.structured_chunk_builder import (
+    StructuredChunkBuilder,
+)
 
 
 class DocumentChunker:
@@ -19,6 +22,7 @@ class DocumentChunker:
         cleaned_json: Path,
         *,
         exclude_pages: set[int] | None = None,
+        structured_records: dict | None = None,
     ):
 
         exclude_pages = exclude_pages or set()
@@ -93,6 +97,13 @@ class DocumentChunker:
                             heading,
                         ),
                         "content": content,
+                        "metadata": dict(
+                            section.get(
+                                "metadata",
+                                {},
+                            )
+                            or {}
+                        ),
                     }
                 )
 
@@ -138,12 +149,18 @@ class DocumentChunker:
                         ),
                         page_number=page["page_number"],
                         content=content,
-                        metadata={
-                            "document": (
-                                document["metadata"]["filename"]
-                            ),
-                            "page": page["page_number"],
-                        },
+                       metadata={
+                           "document": (
+                               document["metadata"]["filename"]
+                           ),
+                           "page": (
+                               page["page_number"]
+                           ),
+                           **section.get(
+                               "metadata",
+                               {},
+                           ),
+                       },
                     )
                 )
 
@@ -194,19 +211,43 @@ class DocumentChunker:
                             content=chunk_text,
                             metadata={
                                 "document": (
-                                    document[
-                                        "metadata"
-                                    ]["filename"]
+                                    document["metadata"]["filename"]
                                 ),
                                 "page": (
                                     page["page_number"]
                                 ),
                                 "parent": parent_id,
+                                **section.get(
+                                    "metadata",
+                                    {},
+                                ),
                             },
                         )
                     )
 
                 chunk_counter += 1
+        
+        if structured_records:
+
+            structured = (
+                StructuredChunkBuilder().build(
+                    record_results=structured_records,
+                )
+            )
+
+            parent_chunks.extend(
+                structured["parent_chunks"]
+            )
+
+            child_chunks.extend(
+                structured["child_chunks"]
+            )
+
+            print(
+                "[STRUCTURED CHUNKS] "
+                f"Parent={len(structured['parent_chunks'])} "
+                f"Child={len(structured['child_chunks'])}"
+            )
 
         output = {
             "parent_chunks": [

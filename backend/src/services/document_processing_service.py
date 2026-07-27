@@ -26,8 +26,17 @@ from src.services.document_manager import DocumentManager
 from src.services.table_processing_service import (
     TableProcessingService,
 )
-
-
+from src.processing.prospectus.record_processing_service import (
+    RecordProcessingService,
+)
+from src.schemas.seat_distribution import (
+    SeatDistributionDocument,
+    SeatDistributionSection,
+)
+from src.processing.seat_distribution_processor import (
+    SeatDistributionProcessor,
+)
+from src.annotations.review_service import ReviewService
 class DocumentProcessingService:
     """
     Runs the complete processing pipeline for one
@@ -120,6 +129,7 @@ class DocumentProcessingService:
             parser.parse(
                 pdf,
                 classification["document_type"],
+                force_pages=None,
             )
 
             if not parsed_path.exists():
@@ -139,6 +149,56 @@ class DocumentProcessingService:
                 )
             )
 
+            print("\n=== DETECTED SECTIONS ===")
+
+            for section in sections:
+                print(
+                    section.section_type,
+                    section.start_page,
+                    section.end_page,
+                )
+
+            seat_processor = SeatDistributionProcessor()
+
+            seat_processing_results = []
+
+            for section in sections:
+
+                if not section.section_type.startswith(
+                    "seat_distribution"
+                ):
+                    continue
+
+                result = seat_processor.process(
+                    section=section,
+                    parsed_pages=parsed_data.get(
+                        "pages",
+                        [],
+                    ),
+                )
+
+                seat_processing_results.append(result)
+
+            print("\n=== SEAT PROCESSOR ===")
+
+            for result in seat_processing_results:
+                print(
+                    f"{result['section'].section_type} "
+                    f"-> extractable={result['extractable']}"
+                )
+
+            review_service = ReviewService()
+
+            pending_reviews = review_service.check(
+                pages=parsed_data.get("pages", []),
+                detected_sections=sections,
+            )
+
+            self.document_manager.save_pending_reviews(
+                document_id=document_id,
+                reviews=pending_reviews,
+            )
+
             sections_path.parent.mkdir(
                 parents=True,
                 exist_ok=True,
@@ -155,6 +215,54 @@ class DocumentProcessingService:
                     },
                     indent=4,
                     ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            seat_distribution_path = (
+                self.document_manager.get_seat_distribution_path(
+                    document_id
+                )
+            )
+
+            seat_distribution_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            seat_distribution = SeatDistributionDocument(
+                document_id=document_id,
+            )
+
+            for section in sections:
+
+                if (
+                    section.section_type
+                    == "seat_distribution_regular"
+                ):
+                    seat_distribution.sections.append(
+                        SeatDistributionSection.from_page_range(
+                            scheme="Regular",
+                            start_page=section.start_page,
+                            end_page=section.end_page,
+                        )
+                    )
+
+                elif (
+                    section.section_type
+                    == "seat_distribution_self_finance"
+                ):
+                    seat_distribution.sections.append(
+                        SeatDistributionSection.from_page_range(
+                            scheme="Self Finance",
+                            start_page=section.start_page,
+                            end_page=section.end_page,
+                        )
+                    )
+
+            seat_distribution_path.write_text(
+                seat_distribution.model_dump_json(
+                    indent=4,
                 ),
                 encoding="utf-8",
             )
@@ -288,13 +396,15 @@ class DocumentProcessingService:
                         "return a markdown page list."
                     )
 
-                curriculum_records = (
-                    CurriculumRecordExtractor().extract(
-                        markdown_pages,
-                        first_source_page=(
-                            curriculum_start
-                        ),
-                    )
+                extractor = CurriculumRecordExtractor()
+
+                curriculum_records = extractor.extract(
+                    markdown_pages,
+                    first_source_page=curriculum_start,
+                )
+
+                curriculum_metadata = (
+                    extractor.get_curriculum_metadata()
                 )
 
                 curriculum_records_path.write_text(
@@ -306,6 +416,9 @@ class DocumentProcessingService:
                             ),
                             "source_end_page": (
                                 curriculum_end
+                            ),
+                            "curriculum_metadata": (
+                                curriculum_metadata
                             ),
                             "records": [
                                 record.to_dict()
@@ -348,8 +461,25 @@ class DocumentProcessingService:
                 raise FileNotFoundError(
                     f"Cleaned output not found: {cleaned_path}"
                 )
+            
+            with open(
+                cleaned_path,
+                "r",
+                encoding="utf-8",
+            ) as f:
+                cleaned_document = json.load(f)
 
-            chunks = chunker.chunk(cleaned_path)
+            record_results = (
+                RecordProcessingService().process(
+                    cleaned_document=cleaned_document,
+                    detected_sections=sections,
+                )
+            )
+
+            chunks = chunker.chunk(
+                cleaned_path,
+                structured_records=record_results,
+            )
 
             if not chunks_path.exists():
                 raise FileNotFoundError(

@@ -225,6 +225,10 @@ def send_message_stream(
                                 "page_references",
                                 [],
                             ),
+                            curriculum_route=result.get(
+                                "curriculum_route",
+                                {},
+                            ),
                         )
                     )
 
@@ -346,6 +350,10 @@ def send_message(
             page_references=result.get(
                 "page_references",
                 [],
+            ),
+            curriculum_route=result.get(
+                "curriculum_route",
+                {},
             ),
         )
     )

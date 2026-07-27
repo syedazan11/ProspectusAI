@@ -52,7 +52,8 @@ class ProspectusSectionDetector:
             re.IGNORECASE,
         ),
         "eligibility": re.compile(
-            r"\bEligibility\s+Conditions\b",
+            r"\bEligibility\b",
+            # r"\bEligibility\s+Conditions\b",
             re.IGNORECASE,
         ),
         "admission_process": re.compile(
@@ -229,6 +230,15 @@ class ProspectusSectionDetector:
 
         end_index = boundary_index - 1
 
+        # print("\n=== REGULAR SEAT DEBUG ===")
+
+        # for i in range(max(0, end_index - 4), end_index + 1):
+        #     page = pages[i]
+        #     print(
+        #         f"Page {page['page_number']}: "
+        #         f"{self._is_dense_seat_table_page(page)}"
+        #     )
+
         if not self._is_dense_seat_table_page(
             pages[end_index]
         ):
@@ -256,9 +266,7 @@ class ProspectusSectionDetector:
                     "dense_table_block_before_exact_"
                     "category_description"
                 ),
-                "boundary_section_type": (
-                    category_section_type
-                ),
+                "boundary_section_type": category_section_type,
                 "boundary_section_number": (
                     boundary_section.metadata.get(
                         "section_number"
@@ -285,7 +293,10 @@ class ProspectusSectionDetector:
             if line.strip()
         ]
 
-        if len(lines) < 40:
+        # if len(lines) < 40:
+        #     return False
+
+        if len(lines) < 10:
             return False
 
         numeric_lines = sum(
@@ -316,13 +327,53 @@ class ProspectusSectionDetector:
         numeric_ratio = numeric_lines / len(lines)
         short_ratio = short_lines / len(lines)
 
-        return (
-            short_ratio >= 0.45
-            and (
-                numeric_ratio >= 0.15
-                or code_like_lines >= 6
-            )
+        # print(
+        #     f"Page {page['page_number']}: "
+        #     f"lines={len(lines)} "
+        #     f"numeric={numeric_lines} "
+        #     f"short={short_lines} "
+        #     f"codes={code_like_lines} "
+        #     f"numeric_ratio={numeric_ratio:.2f} "
+        #     f"short_ratio={short_ratio:.2f}"
+        # )
+
+        score = 0
+
+        if numeric_ratio >= 0.10:
+            score += 2
+
+        if short_ratio >= 0.25:
+            score += 2
+
+        if code_like_lines >= 4:
+            score += 2
+
+        if numeric_lines >= 15:
+            score += 1
+
+        if short_lines >= 20:
+            score += 1
+
+        drawing_count = (
+            page.get("metadata", {})
+                .get("cheap_route", {})
+                .get("drawing_count", 0)
         )
+
+        if drawing_count >= 2000:
+            score += 2
+        
+        # print(
+        #     f"drawing={drawing_count} score={score}"
+        # )
+
+        has_strong_structure = (
+            drawing_count >= 2000
+            or code_like_lines >= 4
+            or numeric_lines >= 15
+        )
+
+        return score >= 4 and has_strong_structure
 
     def _detect_chapter_covers(
         self,
@@ -674,29 +725,73 @@ class ProspectusSectionDetector:
             },
         )
 
+    # def _numbered_heading_for_pattern(
+    #     self,
+    #     text: str,
+    #     pattern: re.Pattern[str],
+    # ) -> str | None:
+    #     lines = [
+    #         line.strip()
+    #         for line in text.splitlines()
+    #         if line.strip()
+    #     ]
+
+    #     for index, line in enumerate(lines):
+    #         if not pattern.search(line):
+    #             continue
+
+    #         for previous in reversed(
+    #             lines[max(0, index - 3):index]
+    #         ):
+    #             if re.fullmatch(
+    #                 r"\d+(?:\.\d+)+",
+    #                 previous,
+    #             ):
+    #                 return previous
+
+    #     return None
+
     def _numbered_heading_for_pattern(
         self,
         text: str,
         pattern: re.Pattern[str],
     ) -> str | None:
+
         lines = [
             line.strip()
             for line in text.splitlines()
             if line.strip()
         ]
 
+        number_pattern = re.compile(
+            r"^(\d+(?:\.\d+)+)"
+        )
+
         for index, line in enumerate(lines):
+
             if not pattern.search(line):
                 continue
 
+            # Case 1:
+            # 4.2 ELIGIBILITY
+            match = number_pattern.match(line)
+
+            if match:
+                return match.group(1)
+
+            # Case 2:
+            # 4.2
+            # ELIGIBILITY
             for previous in reversed(
                 lines[max(0, index - 3):index]
             ):
-                if re.fullmatch(
-                    r"\d+(?:\.\d+)+",
-                    previous,
-                ):
-                    return previous
+
+                match = number_pattern.match(
+                    previous
+                )
+
+                if match:
+                    return match.group(1)
 
         return None
 
@@ -1049,6 +1144,12 @@ class ProspectusSectionDetector:
 
             start_index = candidate["index"]
             section_number = candidate["section_number"]
+            # print(
+            #     f"[CATEGORY] "
+            #     f"{section_type} "
+            #     f"page={pages[start_index]['page_number']} "
+            #     f"number={section_number}"
+            # )
 
             end_index = self._category_subsection_end_index(
                 pages=pages,
@@ -1134,14 +1235,117 @@ class ProspectusSectionDetector:
 
         return None
 
+    # def _category_subsection_end_index(
+    #     self,
+    #     pages: list[dict[str, Any]],
+    #     start_index: int,
+    #     section_number: str,
+    # ) -> int:
+    #     match = re.fullmatch(
+    #         r"(\d+(?:\.\d+)*)\(([ivxlcdm]+)\)",
+    #         section_number,
+    #         re.IGNORECASE,
+    #     )
+
+    #     if match is None:
+    #         return start_index
+
+    #     parent = match.group(1)
+    #     current_roman = match.group(2).lower()
+
+    #     roman_values = {
+    #         "i": 1,
+    #         "ii": 2,
+    #         "iii": 3,
+    #         "iv": 4,
+    #         "v": 5,
+    #         "vi": 6,
+    #         "vii": 7,
+    #         "viii": 8,
+    #         "ix": 9,
+    #         "x": 10,
+    #     }
+
+    #     current_value = roman_values.get(current_roman)
+
+    #     if current_value is None:
+    #         return start_index
+
+    #     sibling_pattern = re.compile(
+    #         rf"(?im)^\s*{re.escape(parent)}\s*"
+    #         rf"\(([ivxlcdm]+)\)"
+    #     )
+
+    #     chapter_ranges = self._chapter_ranges(pages)
+    #     start_page_number = pages[start_index]["page_number"]
+
+    #     containing_chapter = next(
+    #         (
+    #             chapter
+    #             for chapter in chapter_ranges
+    #             if (
+    #                 chapter["start_page"]
+    #                 <= start_page_number
+    #                 <= chapter["end_page"]
+    #             )
+    #         ),
+    #         None,
+    #     )
+
+    #     chapter_end_index = len(pages) - 1
+
+    #     if containing_chapter is not None:
+    #         for index, page in enumerate(pages):
+    #             if (
+    #                 page["page_number"]
+    #                 == containing_chapter["end_page"]
+    #             ):
+    #                 chapter_end_index = index
+    #                 break
+
+    #     for index in range(
+    #         start_index + 1,
+    #         chapter_end_index + 1,
+    #     ):
+    #         text = self._page_text(pages[index])
+
+    #         for sibling in sibling_pattern.finditer(text):
+    #             sibling_value = roman_values.get(
+    #                 sibling.group(1).lower()
+    #             )
+
+    #             if (
+    #                 sibling_value is not None
+    #                 and sibling_value > current_value
+    #             ):
+    #                 # Keep this page because the final category
+    #                 # descriptions and next sibling heading may
+    #                 # share the same physical page.
+    #                 print(
+    #                     f"[SIBLING] "
+    #                     f"{section_number} -> "
+    #                     f"{sibling.group(1)} "
+    #                     f"on page {pages[index]['page_number']}"
+    #                 )
+    #                 return index
+    #     print(
+    #         f"[NO SIBLING] "
+    #         f"{section_number} "
+    #         f"using chapter end "
+    #         f"{pages[chapter_end_index]['page_number']}"
+    #     )
+
+    #     return chapter_end_index
+
     def _category_subsection_end_index(
         self,
         pages: list[dict[str, Any]],
         start_index: int,
         section_number: str,
     ) -> int:
+
         match = re.fullmatch(
-            r"(\d+(?:\.\d+)*)\(([ivxlcdm]+)\)",
+            r"(\d+)\.(\d+)\(([ivxlcdm]+)\)",
             section_number,
             re.IGNORECASE,
         )
@@ -1149,43 +1353,26 @@ class ProspectusSectionDetector:
         if match is None:
             return start_index
 
-        parent = match.group(1)
-        current_roman = match.group(2).lower()
+        chapter = int(match.group(1))
+        parent = int(match.group(2))
 
-        roman_values = {
-            "i": 1,
-            "ii": 2,
-            "iii": 3,
-            "iv": 4,
-            "v": 5,
-            "vi": 6,
-            "vii": 7,
-            "viii": 8,
-            "ix": 9,
-            "x": 10,
-        }
-
-        current_value = roman_values.get(current_roman)
-
-        if current_value is None:
-            return start_index
-
-        sibling_pattern = re.compile(
-            rf"(?im)^\s*{re.escape(parent)}\s*"
-            rf"\(([ivxlcdm]+)\)"
+        next_parent_pattern = re.compile(
+            rf"(?im)^\s*{chapter}\.{parent+1}\s*"
+            r"\(\s*i\s*\)"
         )
 
         chapter_ranges = self._chapter_ranges(pages)
-        start_page_number = pages[start_index]["page_number"]
+
+        start_page = pages[start_index]["page_number"]
 
         containing_chapter = next(
             (
-                chapter
-                for chapter in chapter_ranges
+                chapter_info
+                for chapter_info in chapter_ranges
                 if (
-                    chapter["start_page"]
-                    <= start_page_number
-                    <= chapter["end_page"]
+                    chapter_info["start_page"]
+                    <= start_page
+                    <= chapter_info["end_page"]
                 )
             ),
             None,
@@ -1194,33 +1381,50 @@ class ProspectusSectionDetector:
         chapter_end_index = len(pages) - 1
 
         if containing_chapter is not None:
-            for index, page in enumerate(pages):
+            for i, page in enumerate(pages):
                 if (
                     page["page_number"]
                     == containing_chapter["end_page"]
                 ):
-                    chapter_end_index = index
+                    chapter_end_index = i
                     break
 
-        for index in range(
+        for i in range(
             start_index + 1,
             chapter_end_index + 1,
         ):
-            text = self._page_text(pages[index])
 
-            for sibling in sibling_pattern.finditer(text):
-                sibling_value = roman_values.get(
-                    sibling.group(1).lower()
+            # Stop if the next admission scheme starts
+            text = self._page_text(pages[i])
+
+            if next_parent_pattern.search(text):
+
+                print(
+                    f"[NEXT PARENT] "
+                    f"{section_number} -> "
+                    f"{chapter}.{parent + 1} "
+                    f"page {pages[i]['page_number']}"
                 )
 
-                if (
-                    sibling_value is not None
-                    and sibling_value > current_value
-                ):
-                    # Keep this page because the final category
-                    # descriptions and next sibling heading may
-                    # share the same physical page.
-                    return index
+                return i - 1
+            # Stop if we encounter another dense seat matrix.
+            if self._is_dense_seat_table_page(pages[i]):
+
+                # print(
+                #     f"[NEXT TABLE] "
+                #     f"{section_number} "
+                #     f"stopped by dense table "
+                #     f"page {pages[i]['page_number']}"
+                # )
+
+                return i - 1
+
+        print(
+            f"[NO NEXT PARENT] "
+            f"{section_number} "
+            f"chapter end "
+            f"{pages[chapter_end_index]['page_number']}"
+        )
 
         return chapter_end_index
 

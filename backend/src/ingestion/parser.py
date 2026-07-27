@@ -63,7 +63,10 @@ class DocumentParser:
         self,
         pdf_path: Path,
         document_type: str,
+        force_pages: set[int] | None = None,
     ) -> ParsedDocument:
+        
+        force_pages = force_pages or set()
 
         print("Extracting authoritative page text...")
 
@@ -117,11 +120,27 @@ class DocumentParser:
             for page in parsed.pages
         }
 
+        if force_pages:
+
+            parsed.pages = [
+                page
+                for page in parsed.pages
+                if page.page_number not in force_pages
+            ]
+
+            completed_pages = {
+                page.page_number
+                for page in parsed.pages
+            }
+
         for page_number, page_path in enumerate(
             page_paths,
             start=1,
         ):
-            if page_number in completed_pages:
+            if (
+                page_number in completed_pages
+                and page_number not in force_pages
+            ):
                 print(
                     f"Skipping page {page_number} "
                     "(checkpointed)."
@@ -136,6 +155,14 @@ class DocumentParser:
             extracted_page = extracted_by_page.get(
                 page_number
             )
+            if (
+                extracted_page is not None
+                and page_number in {87, 88, 89, 92, 93, 94}
+            ):
+                print(
+                    f"[DEBUG] page={page_number} "
+                    f"layout_items={len(extracted_page.layout_items or [])}"
+                )
 
             authoritative_text = (
                 extracted_page.text.strip()
@@ -166,6 +193,11 @@ class DocumentParser:
                     page_number=page_number,
                     markdown=authoritative_text,
                     text=authoritative_text,
+                    layout_items=(
+                       extracted_page.layout_items
+                       if extracted_page is not None
+                       else None
+                    ),
                     has_tables=False,
                     has_images=False,
                     metadata={
@@ -305,6 +337,11 @@ class DocumentParser:
                 page_number=page_number,
                 markdown=authoritative_text,
                 text=authoritative_text,
+                layout_items=(
+                    extracted_page.layout_items
+                    if extracted_page is not None
+                    else None
+                ),
                 has_tables=table_count > 0,
                 has_images=picture_count > 0,
                 metadata={

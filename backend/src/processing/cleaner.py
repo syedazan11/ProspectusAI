@@ -1,8 +1,9 @@
+import unicodedata
 import json
 import re
 from pathlib import Path
 from src.processing.table_parser import TableParser
-
+from src.processing.reading_order import ReadingOrderRepairService
 
 class DocumentCleaner:
     """
@@ -16,10 +17,41 @@ class DocumentCleaner:
 
         cleaned_pages = []
         table_parser = TableParser()
+        reading_order = ReadingOrderRepairService()
 
         for page in document["pages"]:
 
             cleaned_text = self._clean_text(page["markdown"])
+            lines = cleaned_text.splitlines()
+
+            analysis = reading_order.analyze_page(lines)
+            
+            if analysis["suspicious"]:
+                reading_order.save_debug_report(
+                    page["page_number"],
+                    analysis,
+                )
+
+            cleaning_stats = self._validate_cleaning(
+                page["markdown"],
+                cleaned_text,
+            )
+
+            layout_lookup: dict[str, list] = {}
+
+            for item in page.get("layout_items") or []:
+
+                cleaned = self._clean_layout_line(
+                    item["text"] if isinstance(item, dict) else item.text
+                )
+
+                if not cleaned:
+                    continue
+
+                layout_lookup.setdefault(
+                    cleaned,
+                    [],
+                ).append(item)
 
             headings = []
             paragraphs = []
@@ -27,6 +59,7 @@ class DocumentCleaner:
             sections = []
             current_heading = None
             current_content = []
+            current_layout_items = []
 
             for line in cleaned_text.splitlines():
 
@@ -50,11 +83,19 @@ class DocumentCleaner:
                                 "heading_level": metadata["heading_level"],
                                 "heading_title": metadata["heading_title"],
                                 "content": current_content,
+                                "layout_items": current_layout_items,
+                                "metadata": {
+                                    "heading_number": metadata["heading_number"],
+                                    "heading_level": metadata["heading_level"],
+                                    "heading_title": metadata["heading_title"],
+                                },
                             }
                         )
 
                     current_heading = line
                     current_content = []
+                    current_layout_items = []
+
 
                 # List detection
                 elif (
@@ -67,6 +108,9 @@ class DocumentCleaner:
 
                     if current_heading is not None:
                         current_content.append(line)
+                        current_layout_items.extend(
+                            layout_lookup.pop(line, [])
+                        )
 
                 # Paragraph
                 else:
@@ -75,6 +119,9 @@ class DocumentCleaner:
 
                     if current_heading is not None:
                         current_content.append(line)
+                        current_layout_items.extend(
+                            layout_lookup.pop(line, [])
+                        )
 
             # Finalize the last section
             if current_heading is not None:
@@ -88,6 +135,12 @@ class DocumentCleaner:
                         "heading_level": metadata["heading_level"],
                         "heading_title": metadata["heading_title"],
                         "content": current_content,
+                        "layout_items": current_layout_items,
+                        "metadata": {
+                            "heading_number": metadata["heading_number"],
+                            "heading_level": metadata["heading_level"],
+                            "heading_title": metadata["heading_title"],
+                        },
                     }
                 )
 
@@ -102,6 +155,7 @@ class DocumentCleaner:
                 {
                     "page_number": page["page_number"],
                     "text": cleaned_text,
+                    "layout_items": page.get("layout_items"),
                     "headings": headings,
                     "paragraphs": paragraphs,
                     "lists": lists,
@@ -109,6 +163,7 @@ class DocumentCleaner:
                     "has_tables": page["has_tables"],
                     "table_corrupted": table_corrupted,
                     "has_images": page["has_images"],
+                    "cleaning_statistics": cleaning_stats,
                 }
             )
 
@@ -146,11 +201,26 @@ class DocumentCleaner:
 
     def _clean_text(self, text: str) -> str:
 
+        text = unicodedata.normalize(
+            "NFKC",
+            text,
+        )
+
+        # Repair words split across line breaks:
+        # Electro-\nMechanical -> ElectroMechanical
+        text = re.sub(
+            r"([A-Za-z])-\n([A-Za-z])",
+            r"\1\2",
+            text,
+        )
+
         # Remove repeated spaces
         text = re.sub(r"[ \t]+", " ", text)
 
         # Remove excessive blank lines
         text = re.sub(r"\n{3,}", "\n\n", text)
+
+        text = self._reconstruct_lines(text)
 
         cleaned_lines = []
 
@@ -177,6 +247,54 @@ class DocumentCleaner:
             cleaned_lines.append(line)
 
         return "\n".join(cleaned_lines)
+    
+    def _clean_layout_line(
+        self,
+        text: str,
+    ) -> str:
+        """
+        Apply the same normalization used by _clean_text(),
+        but to a single OCR line.
+        """
+
+        text = unicodedata.normalize(
+            "NFKC",
+            text,
+        )
+
+        text = text.strip()
+
+        text = re.sub(
+            r"[©¢»«•●◆■□★☆]+",
+            "",
+            text,
+        )
+
+        text = re.sub(
+            r"^[^\w]+",
+            "",
+            text,
+        )
+
+        text = re.sub(
+            r"[^\w]+$",
+            "",
+            text,
+        )
+
+        text = re.sub(
+            r"[&@]{2,}",
+            "",
+            text,
+        )
+
+        text = re.sub(
+            r"\s+",
+            " ",
+            text,
+        ).strip()
+
+        return text
 
     def _is_heading(self, line: str) -> bool:
         """
@@ -224,6 +342,14 @@ class DocumentCleaner:
             if len(words) < 2:
                 return False
 
+            # Reject page headers like:
+            # OF ENGINEERING & TECHNOLOGY
+            # PROSPECTUS 2026
+            if len(words) <= 4 and not any(
+                c.isdigit() for c in line
+            ):
+                return False
+
             return True
 
         # -------------------------
@@ -231,18 +357,25 @@ class DocumentCleaner:
         # -------------------------
 
         match = re.match(
-            r"^\d+(?:\.\d+)*\.?\s+(.+)$",
+            r"^(?P<number>\d+(?:\.\d+)*)\.?\s+(?P<title>.+)$",
             line,
         )
 
         if match:
 
-            title = match.group(1).strip()
+            number = match.group("number")
+            title = match.group("title").strip()
+
+            # Single-number headings like:
+            # 1. Hostel
+            # 2. International Hostel
+            # are usually list items, not document sections.
+            if "." not in number:
+                return False
 
             if len(title.split()) < 2:
                 return False
 
-            # Title shouldn't be mostly numbers
             title_letters = sum(
                 c.isalpha()
                 for c in title
@@ -270,10 +403,6 @@ class DocumentCleaner:
             heading.strip(),
         )
 
-        print("=" * 80)
-        print("HEADING:", repr(heading))
-        print("MATCH:", bool(match))
-
         if match:
             number = match.group("number")
             title = match.group("title").strip()
@@ -289,3 +418,91 @@ class DocumentCleaner:
             "heading_level": 1,
             "heading_title": heading.strip(),
         }
+    
+    def _reconstruct_lines(self, text: str) -> str:
+        """
+        Preserve OCR line structure.
+
+        Multi-column prospectuses cannot be reconstructed safely without
+        layout coordinates. Aggressively joining lines destroys curriculum
+        tables, faculty lists, fee schedules, and eligibility clauses.
+
+        Keep one OCR line per output line and let downstream parsers decide
+        how to interpret the structure.
+        """
+
+        cleaned_lines = [
+            line.rstrip()
+            for line in text.splitlines()
+        ]
+
+        return "\n".join(cleaned_lines)
+    
+    def _is_structural_label(self, line: str) -> bool:
+        """
+        Returns True if a line is likely a structural label that should
+        remain on its own line.
+        """
+
+        line = line.strip()
+
+        if not line:
+            return False
+
+        # Ends with colon
+        if line.endswith(":"):
+            return True
+
+        # Very short title-like labels
+        words = line.split()
+
+        if (
+            1 <= len(words) <= 4
+            and all(
+                word[:1].isupper()
+                for word in words
+                if word
+            )
+        ):
+            return True
+
+        return False
+    
+    def _validate_cleaning(
+        self,
+        original_text: str,
+        cleaned_text: str,
+    ) -> dict:
+        """
+        Generate cleaning statistics for validation.
+        """
+
+        original_characters = len(original_text)
+        cleaned_characters = len(cleaned_text)
+
+        original_lines = len(original_text.splitlines())
+        cleaned_lines = len(cleaned_text.splitlines())
+
+        original_blank_lines = sum(
+            1 for line in original_text.splitlines()
+            if not line.strip()
+        )
+
+        cleaned_blank_lines = sum(
+            1 for line in cleaned_text.splitlines()
+            if not line.strip()
+        )
+
+        return {
+            "original_characters": original_characters,
+            "cleaned_characters": cleaned_characters,
+            "character_delta": original_characters - cleaned_characters,
+            "original_lines": original_lines,
+            "cleaned_lines": cleaned_lines,
+            "line_delta": original_lines - cleaned_lines,
+            "blank_lines_removed": (
+                original_blank_lines - cleaned_blank_lines
+            ),
+        "changed": original_text != cleaned_text,
+        }
+        

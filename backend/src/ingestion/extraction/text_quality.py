@@ -16,6 +16,9 @@ class TextQualityAnalyzer:
     MIN_WORDS = 8
     MIN_ALPHANUMERIC_RATIO = 0.35
     MAX_REPLACEMENT_CHARACTERS = 5
+    MAX_NEWLINE_RATIO = 0.25
+    MAX_SINGLE_WORD_LINE_RATIO = 0.60
+    MAX_AVERAGE_WORD_LENGTH = 20
 
     def analyze(self, text: str) -> TextQuality:
         normalized = text.strip()
@@ -44,7 +47,70 @@ class TextQualityAnalyzer:
             normalized.count("\ufffd")
         )
 
+        punctuation_count = sum(
+            not character.isalnum() and not character.isspace()
+            for character in normalized
+        )
+
+        punctuation_ratio = (
+            punctuation_count / character_count
+            if character_count > 0
+            else 0.0
+        )
+
+        unique_words = len(
+            {
+                word.lower()
+                for word in words
+            }
+        )
+
+        vocabulary_ratio = (
+            unique_words / word_count
+            if word_count > 0
+            else 0.0
+        )
+
+        lines = [
+            line.strip()
+            for line in normalized.splitlines()
+            if line.strip()
+        ]
+
+        line_count = len(lines)
+
+        newline_ratio = (
+            line_count / word_count
+            if word_count > 0
+            else 0.0
+        )
+
+        single_word_lines = sum(
+            len(
+                re.findall(
+                    r"\b[\w'-]+\b",
+                    line,
+                    flags=re.UNICODE,
+                )
+            ) == 1
+            for line in lines
+        )
+
+        single_word_line_ratio = (
+            single_word_lines / line_count
+            if line_count > 0
+            else 0.0
+        )
+
+        average_word_length = (
+            sum(len(word) for word in words)
+            / word_count
+            if word_count > 0
+            else 0.0
+        )
+
         reasons: list[str] = []
+        warnings: list[str] = []
 
         boilerplate_patterns = [
             r"ned university",
@@ -98,6 +164,56 @@ class TextQualityAnalyzer:
                 "too_many_replacement_characters"
             )
 
+        if newline_ratio > self.MAX_NEWLINE_RATIO:
+            warnings.append(
+                "excessive_line_breaks"
+            )
+
+        if (
+            single_word_line_ratio
+            > self.MAX_SINGLE_WORD_LINE_RATIO
+        ):
+            warnings.append(
+                "fragmented_text"
+            )
+
+        if (
+            average_word_length
+            > self.MAX_AVERAGE_WORD_LENGTH
+        ):
+            warnings.append(
+                "abnormal_word_length"
+            )
+
+        if punctuation_ratio > 0.35:
+            warnings.append(
+                "excessive_punctuation"
+            )
+
+        if (
+            word_count >= 20
+            and vocabulary_ratio < 0.20
+        ):
+            warnings.append(
+                "highly_repetitive_text"
+            )
+
+        if warnings:
+            print(
+                f"[QUALITY WARNING] "
+                f"chars={character_count} "
+                f"words={word_count} "
+                f"warnings={warnings}"
+            )
+
+        if reasons:
+            print(
+                f"[QUALITY FAILURE] "
+                f"chars={character_count} "
+                f"words={word_count} "
+                f"reasons={reasons}"
+            )
+            
         return TextQuality(
             character_count=character_count,
             word_count=word_count,
@@ -110,4 +226,5 @@ class TextQualityAnalyzer:
             ),
             is_usable=not reasons,
             reasons=reasons,
-        )
+            warnings=warnings,
+    )

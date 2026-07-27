@@ -53,57 +53,93 @@ class ProgrammeEntityResolver:
             self._build_alias_index()
         )
 
+    # def resolve(
+    #     self,
+    #     question: str,
+    # ) -> list[dict]:
+    #     normalized_question = self._normalize(
+    #         question
+    #     )
+
+    #     if not normalized_question:
+    #         return []
+
+    #     exact_matches = (
+    #         self._canonical_name_matches(
+    #             normalized_question
+    #         )
+    #     )
+
+    #     if exact_matches:
+    #         exact_matches = (
+    #             self._apply_context_disambiguation(
+    #                 question=normalized_question,
+    #                 matches=exact_matches,
+    #             )
+    #         )
+
+    #         return self._deduplicate(
+    #             exact_matches
+    #         )
+
+    #     alias_matches = self._alias_matches(
+    #         question=question,
+    #         normalized_question=normalized_question,
+    #     )
+
+    #     if not alias_matches:
+    #         return []
+
+    #     alias_matches = (
+    #         self._apply_context_disambiguation(
+    #             question=normalized_question,
+    #             matches=alias_matches,
+    #         )
+    #     )
+
+    #     return self._deduplicate(
+    #         alias_matches
+    #     )
+
     def resolve(
         self,
         question: str,
     ) -> list[dict]:
-        normalized_question = self._normalize(
-            question
-        )
+
+        normalized_question = self._normalize(question)
 
         if not normalized_question:
             return []
 
-        exact_matches = (
+        # Collect BOTH canonical and alias matches.
+        matches = []
+
+        matches.extend(
             self._canonical_name_matches(
                 normalized_question
             )
         )
 
-        if exact_matches:
-            exact_matches = self._prefer_longest(
-                exact_matches
+        matches.extend(
+            self._alias_matches(
+                question=question,
+                normalized_question=normalized_question,
             )
-
-            exact_matches = (
-                self._apply_context_disambiguation(
-                    question=normalized_question,
-                    matches=exact_matches,
-                )
-            )
-
-            return self._deduplicate(
-                exact_matches
-            )
-
-        alias_matches = self._alias_matches(
-            question=question,
-            normalized_question=normalized_question,
         )
 
-        if not alias_matches:
+        matches = self._deduplicate(matches)
+
+        if not matches:
             return []
 
-        alias_matches = (
-            self._apply_context_disambiguation(
-                question=normalized_question,
-                matches=alias_matches,
-            )
+        matches = self._apply_context_disambiguation(
+            question=normalized_question,
+            matches=matches,
         )
 
-        return self._deduplicate(
-            alias_matches
-        )
+        return self._deduplicate(matches)
+
+
 
     def _build_programmes(
         self,
@@ -186,10 +222,22 @@ class ProgrammeEntityResolver:
             name
         )
 
+        base_programme = re.split(
+            r"\bwith\s+speciali[sz]ation\b",
+            core,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0].strip()
+
         aliases = {
             normalized_name,
             core,
         }
+
+        if base_programme:
+            aliases.add(
+                self._normalize(base_programme)
+            )
 
         initialism = self._initialism(
             core
@@ -298,6 +346,15 @@ class ProgrammeEntityResolver:
             matched.extend(
                 programmes
             )
+        print(
+    "MATCHED ALIAS:",
+        alias,
+        "->",
+        [
+            p["programme_code"]
+            for p in programmes
+        ],
+    )
 
         return matched
 

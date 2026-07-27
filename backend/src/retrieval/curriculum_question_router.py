@@ -70,31 +70,44 @@ class CurriculumQuestionRouter:
         self,
         *,
         question: str,
-        curriculum_records: list[dict],
-        programme_matches: list[dict] | None = None,
+        curriculum_scheme: str | None = None,
+        term_names: list[str] | None = None,
     ) -> dict | None:
         normalized = self._normalize(question)
+        if term_names is None:
+            term_names = []
+
+        mapped_year = None
+        mapped_term = None
+
+        if curriculum_scheme == "year_term":
+            mapped_year, mapped_term = (
+                self._map_semester_number(
+                    normalized,
+                    curriculum_scheme=curriculum_scheme,
+                    term_names=term_names,
+                )
+            )
 
         if not self._is_curriculum_question(
             normalized
         ):
             return None
 
-        if programme_matches is None:
-            programme_matches = self._match_programmes(
-                normalized=normalized,
-                curriculum_records=curriculum_records,
-            )
-
-        matched_study_year = self._match_study_year(
-            normalized
+        matched_study_year = (
+            self._match_study_year(normalized)
+            or mapped_year
         )
 
         common = {
-            "study_year": matched_study_year,
-            "semester": self._match_semester(
-                normalized
-            ),
+           "study_year": (
+               matched_study_year
+               or mapped_year
+           ),
+           "semester": (
+               self._match_semester(normalized)
+               or mapped_term
+           ),
             "course_code": self._match_course_code(
                 question
             ),
@@ -108,48 +121,14 @@ class CurriculumQuestionRouter:
         ):
             return {
                 "status": "unsupported_study_year",
-                "programme_matches": programme_matches,
                 **common,
             }
-
-        if not programme_matches:
-            return {
-                "status": "programme_not_found",
-                "programme_matches": [],
-                **common,
-            }
-
-        if (
-            len(programme_matches) > 1
-            and common["course_code"] is not None
-        ):
-            programme_matches = (
-                self._disambiguate_by_course_code(
-                    programme_matches=programme_matches,
-                    course_code=common["course_code"],
-                    curriculum_records=curriculum_records,
-                )
-            )
-
-        if len(programme_matches) > 1:
-            return {
-                "status": "programme_ambiguous",
-                "programme_matches": (
-                    programme_matches
-                ),
-                **common,
-            }
-
-        programme = programme_matches[0]
 
         return {
-            "status": "matched",
-            "programme_code": (
-                programme["programme_code"]
-            ),
-            "programme": programme["programme"],
+            "status": "curriculum",
             **common,
         }
+
 
     def _is_curriculum_question(
         self,
@@ -159,102 +138,6 @@ class CurriculumQuestionRouter:
             term in normalized
             for term in self.CURRICULUM_TERMS
         )
-
-    def _match_programmes(
-        self,
-        *,
-        normalized: str,
-        curriculum_records: list[dict],
-    ) -> list[dict]:
-        unique = {}
-
-        for record in curriculum_records:
-            code = str(
-                record.get("programme_code", "")
-            ).strip()
-
-            name = str(
-                record.get("programme", "")
-            ).strip()
-
-            if not code or not name:
-                continue
-
-            unique[(code, name)] = {
-                "programme_code": code,
-                "programme": name,
-            }
-
-        matches = []
-
-        for programme in unique.values():
-            normalized_name = self._normalize(
-                programme["programme"]
-            )
-
-            if normalized_name in normalized:
-                matches.append(programme)
-
-        if not matches:
-            return []
-
-        longest_name_length = max(
-            len(
-                self._normalize(
-                    item["programme"]
-                )
-            )
-            for item in matches
-        )
-
-        return [
-            item
-            for item in matches
-            if len(
-                self._normalize(
-                    item["programme"]
-                )
-            ) == longest_name_length
-        ]
-
-    @staticmethod
-    def _disambiguate_by_course_code(
-        *,
-        programme_matches: list[dict],
-        course_code: str,
-        curriculum_records: list[dict],
-    ) -> list[dict]:
-        candidate_codes = {
-            item["programme_code"]
-            for item in programme_matches
-        }
-
-        matching_codes = {
-            str(
-                record.get("programme_code", "")
-            ).strip()
-            for record in curriculum_records
-            if (
-                str(
-                    record.get("programme_code", "")
-                ).strip()
-                in candidate_codes
-                and str(
-                    record.get("course_code", "")
-                ).strip().casefold()
-                == course_code.casefold()
-            )
-        }
-
-        if len(matching_codes) != 1:
-            return programme_matches
-
-        return [
-            item
-            for item in programme_matches
-            if item["programme_code"]
-            in matching_codes
-        ]
 
     def _match_study_year(
         self,
@@ -268,6 +151,96 @@ class CurriculumQuestionRouter:
                 return study_year
 
         return None
+    
+    @staticmethod
+    def _map_semester_number(
+        normalized: str,
+        *,
+        curriculum_scheme: str | None,
+        term_names: list[str],
+    ) -> tuple[str | None, str | None]:
+
+        if curriculum_scheme != "year_term":
+            return None, None
+
+        semester_number = None
+
+        # Numeric forms:
+        # semester 1, semester 2, ...
+        match = re.search(
+            r"\bsemester\s*(\d+)\b",
+            normalized,
+        )
+
+        if match is None:
+            match = re.search(
+                r"\b(\d+)(?:st|nd|rd|th)?\s*semester\b",
+                normalized,
+            )
+
+        if match:
+            semester_number = int(match.group(1))
+        else:
+            # Ordinal word forms:
+            # first semester, second semester, ...
+            ordinal_map = {
+                "first": 1,
+                "second": 2,
+                "third": 3,
+                "fourth": 4,
+                "fifth": 5,
+                "sixth": 6,
+                "seventh": 7,
+                "eighth": 8,
+                "ninth": 9,
+                "tenth": 10,
+            }
+
+            for word, number in ordinal_map.items():
+                if re.search(
+                    rf"\b{word}[\s-]*semester\b",
+                    normalized,
+                ):
+                    semester_number = number
+                    break
+
+        if semester_number is None or semester_number <= 0:
+            return None, None
+
+        if semester_number <= 0:
+            return None, None
+
+        year_names = (
+            "FIRST YEAR",
+            "SECOND YEAR",
+            "THIRD YEAR",
+            "FINAL YEAR",
+            "FIFTH YEAR",
+            "SIXTH YEAR",
+        )
+
+        terms = [
+            term.strip()
+            for term in term_names
+            if term.strip()
+        ]
+
+        if len(terms) < 2:
+            return None, None
+
+        year_index = (
+            semester_number - 1
+        ) // len(terms)
+
+        term = terms[
+            (semester_number - 1)
+            % len(terms)
+        ]
+
+        return (
+            year_names[year_index],
+            term,
+        )
 
     @staticmethod
     def _has_explicit_unsupported_year(
@@ -305,24 +278,30 @@ class CurriculumQuestionRouter:
     def _match_semester(
         normalized: str,
     ) -> str | None:
-        has_fall = bool(
-            re.search(
-                r"\b(fall|autumn)\b",
-                normalized,
-            )
-        )
-
-        has_spring = bool(
-            re.search(
-                r"\bspring\b",
-                normalized,
-            )
-        )
-
-        if has_fall and not has_spring:
+        # -------- Fall / Semester I --------
+        if re.search(
+            r"\b("
+            r"fall|autumn|"
+            r"first[\s-]*semester|"
+            r"1st[\s-]*semester|"
+            r"semester[\s-]*1|"
+            r"semester[\s-]*i"
+            r")\b",
+            normalized,
+        ):
             return "Fall"
 
-        if has_spring and not has_fall:
+        # -------- Spring / Semester II --------
+        if re.search(
+            r"\b("
+            r"spring|"
+            r"second[\s-]*semester|"
+            r"2nd[\s-]*semester|"
+            r"semester[\s-]*2|"
+            r"semester[\s-]*ii"
+            r")\b",
+            normalized,
+        ):
             return "Spring"
 
         return None

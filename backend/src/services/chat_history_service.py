@@ -168,6 +168,7 @@ class ChatHistoryService:
         content: str,
         sources: list | None = None,
         page_references: list | None = None,
+        curriculum_route: dict | None = None,
     ) -> dict[str, Any]:
 
         if role not in {
@@ -204,6 +205,9 @@ class ChatHistoryService:
                 page_references=(
                     page_references or []
                 ),
+                curriculum_route=(
+                        curriculum_route or {}
+                    ),
             )
 
             chat.updated_at = utc_now()
@@ -326,6 +330,9 @@ class ChatHistoryService:
             "sources": message.sources or [],
             "page_references": (
                 message.page_references or []
+            ),
+            "curriculum_route": (
+                message.curriculum_route or {}
             ),
             "created_at": (
                 message.created_at.isoformat()

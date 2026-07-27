@@ -70,6 +70,20 @@ class CurriculumRetriever:
             for point in points
         ]
 
+        print("\n========== CURRICULUM RETRIEVER ==========")
+        print(f"Retrieved {len(records)} records")
+        for r in records:
+            print(
+                r.get("course_code"),
+                "|",
+                r.get("course_title"),
+                "|",
+                r.get("study_year"),
+                "|",
+                r.get("semester"),
+            )
+        print("=========================================\n")
+
         records.sort(
             key=lambda record: (
                 self._semester_order(

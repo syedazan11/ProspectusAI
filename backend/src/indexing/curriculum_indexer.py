@@ -39,6 +39,11 @@ class CurriculumIndexer:
         ) as file:
             document = json.load(file)
 
+        curriculum_metadata = document.get(
+            "curriculum_metadata",
+            {},
+        )
+
         records = document["records"]
 
         print(
@@ -90,6 +95,17 @@ class CurriculumIndexer:
                         vector=vector.tolist(),
                         payload={
                             "document": document_id,
+                            "curriculum_scheme": (
+                                curriculum_metadata.get(
+                                    "curriculum_scheme"
+                                )
+                            ),
+                            "term_names": (
+                                curriculum_metadata.get(
+                                    "term_names",
+                                    [],
+                                )
+                            ),
                             "content_type": (
                                 "curriculum_record"
                             ),

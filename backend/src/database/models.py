@@ -139,6 +139,12 @@ class Message(Base):
         nullable=False,
     )
 
+    curriculum_route: Mapped[dict] = mapped_column(
+        JSONB,
+        default=dict,
+        nullable=False,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,

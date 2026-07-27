@@ -13,6 +13,19 @@ class TextQuality:
     replacement_character_count: int
     is_usable: bool
     reasons: list[str]
+    warnings: list[str]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+@dataclass(slots=True)
+class LayoutItem:
+    text: str
+    x: float
+    y: float
+    top: float
+    bottom: float
+    height: float
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -24,6 +37,7 @@ class ExtractedPage:
     text: str
     extraction_method: ExtractionMethod
     quality: TextQuality
+    layout_items: list[LayoutItem] | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -31,6 +45,11 @@ class ExtractedPage:
             "text": self.text,
             "extraction_method": self.extraction_method,
             "quality": self.quality.to_dict(),
+            "layout_items": (
+                [item.to_dict() for item in self.layout_items]
+                if self.layout_items is not None
+                else None
+            ),
         }
 
 

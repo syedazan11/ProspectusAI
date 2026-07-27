@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-
+from src.ingestion.extraction.models import LayoutItem
 
 class ParsedPage(BaseModel):
     page_number: int
@@ -7,6 +7,8 @@ class ParsedPage(BaseModel):
     markdown: str = ""
 
     text: str = ""
+
+    layout_items: list[LayoutItem] | None = None
 
     headings: list[str] = Field(default_factory=list)
 

@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import fitz
@@ -26,8 +27,18 @@ class DocumentExtractor:
 
     def __init__(self) -> None:
         self.native_extractor = PDFExtractor()
+        # self.ocr_extractor = OCRExtractor(
+        #     render_scale=1.0,
+        # )
+        render_scale = float(
+            os.getenv(
+                "OCR_RENDER_SCALE",
+                "2.0",
+            )
+        )
+
         self.ocr_extractor = OCRExtractor(
-            render_scale=1.0,
+            render_scale=render_scale,
         )
 
     def extract(
@@ -58,8 +69,19 @@ class DocumentExtractor:
                     )
                 )
 
-            for page in ocr_pages:
-                pages_by_number[page.page_number] = page
+            for ocr_page in ocr_pages:
+
+                native_page = pages_by_number[
+                    ocr_page.page_number
+                ]
+
+                if (
+                    ocr_page.quality.word_count
+                    >= native_page.quality.word_count
+                ):
+                    pages_by_number[
+                        ocr_page.page_number
+                    ] = ocr_page
 
         pages = [
             pages_by_number[page_number]
@@ -80,6 +102,36 @@ class DocumentExtractor:
             not page.quality.is_usable
             for page in pages
         )
+
+        ocr_reason_summary = {}
+
+        for page in pages:
+            for reason in page.quality.reasons:
+                ocr_reason_summary[reason] = (
+                    ocr_reason_summary.get(reason, 0) + 1
+                )
+
+        usable_pages = sum(
+            page.quality.is_usable
+            for page in pages
+        )
+
+        print("\n========== Extraction Summary ==========")
+        print(f"Total pages     : {len(pages)}")
+        print(f"Native pages    : {native_pages}")
+        print(f"OCR pages       : {ocr_pages}")
+        print(f"Usable pages    : {usable_pages}")
+        print(f"Needs attention : {failed_pages}")
+
+        if ocr_reason_summary:
+            print("\nFallback reasons:")
+
+            for reason, count in sorted(
+                ocr_reason_summary.items()
+           ):
+                print(f"  {reason}: {count}")
+
+        print("========================================\n")
 
         return ExtractedDocument(
             source_file=native_result.source_file,

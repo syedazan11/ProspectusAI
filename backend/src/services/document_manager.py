@@ -7,6 +7,9 @@ from typing import Any
 
 from dotenv import load_dotenv
 from src.core.qdrant_client import get_qdrant_client
+from src.schemas.review_models import (
+    PendingSectionReview,
+)
 
 class DocumentManager:
     """
@@ -281,6 +284,17 @@ class DocumentManager:
             / "sections"
             / f"{document_id}.json"
         )
+    
+    def get_seat_distribution_path(
+        self,
+        document_id: str,
+    ) -> Path:
+
+        return (
+            self.storage_dir
+            / "seat_distribution"
+            / f"{document_id}.json"
+        )
 
     def get_pages_dir(
         self,
@@ -291,6 +305,63 @@ class DocumentManager:
             self.storage_dir
             / "pages"
             / document_id
+        )
+    
+    def save_pending_reviews(
+        self,
+        document_id: str,
+        reviews: list[PendingSectionReview],
+    ) -> None:
+
+        registry = self.load_registry()
+
+        for document in registry["documents"]:
+
+            if (
+                document["document_id"]
+                == document_id
+            ):
+                document.pop("pending_reviews", None)
+                document["review"] = {
+                    "status": (
+                        "clean"
+                        if not reviews
+                        else "pending"
+                    ),
+                    "pending_reviews": [
+                        review.__dict__
+                        for review in reviews
+                    ],
+                    "manual_annotations": [],
+                }
+
+                self.save_registry(registry)
+                return
+
+        raise ValueError(
+            f"Unknown document: {document_id}"
+        )
+    
+    def load_pending_reviews(
+        self,
+        document_id: str,
+    ) -> list[dict[str, Any]]:
+
+        registry = self.load_registry()
+
+        for document in registry["documents"]:
+
+            if (
+                document["document_id"]
+                == document_id
+            ):
+                return (
+                    document.get("review", {})
+                    .get("pending_reviews", [])
+                )
+
+        raise ValueError(
+            f"Unknown document: {document_id}"
         )
 
     def list_documents(
@@ -435,6 +506,9 @@ class DocumentManager:
             self.get_chunks_path(document_id),
             self.get_tables_path(document_id),
             self.get_sections_path(document_id),
+            self.get_seat_distribution_path(
+                document_id
+            ),
         ]
 
         for path in file_paths:

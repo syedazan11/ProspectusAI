@@ -2,7 +2,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
-
+from collections.abc import Generator
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -100,6 +100,28 @@ class RescueAnswerService:
             self.document_manager.get_active_document()
         )
 
+        curriculum_selection = (
+            self._handle_curriculum_selection(
+                question=question,
+                conversation_history=conversation_history,
+                active_document=active_document,
+            )
+        )
+
+        if curriculum_selection is not None:
+            return curriculum_selection
+        
+        curriculum_year_selection = (
+            self._handle_curriculum_year_selection(
+                question=question,
+                conversation_history=conversation_history,
+                active_document=active_document,
+            )
+        )
+
+        if curriculum_year_selection is not None:
+            return curriculum_year_selection
+
         sections_path = (
             self.document_manager.storage_dir
             / "sections"
@@ -123,6 +145,7 @@ class RescueAnswerService:
         curriculum_response = self._handle_curriculum_question(
             question=question,
             active_document=active_document,
+            conversation_history=conversation_history,
         )
 
         if curriculum_response is not None:
@@ -146,6 +169,19 @@ class RescueAnswerService:
                 12,
             ),
         )
+
+        print("\n========== RETRIEVER RETURNED ==========")
+
+        for i, chunk in enumerate(chunks[:15], 1):
+            print(
+                i,
+                chunk.get("chunk_id"),
+                chunk.get("page_number"),
+                chunk.get("heading"),
+                chunk.get("final_score"),
+            )
+
+        print("========================================")
 
         if not chunks:
 
@@ -211,10 +247,13 @@ class RescueAnswerService:
                 chunk_id
             )
 
-        context = self._build_context(
+        context_result = self._build_context(
             question=retrieval_query,
             chunks=chunks,
         )
+
+        context = context_result["context"]
+        selected_chunks = context_result["selected_chunks"]
 
         has_complex_table = any(
             bool(
@@ -254,7 +293,7 @@ class RescueAnswerService:
 
         page_references = (
             self._build_page_references(
-                chunks=chunks,
+                chunks=selected_chunks,
                 answer=answer,
                 complex_only=has_complex_table,
             )
@@ -287,7 +326,7 @@ class RescueAnswerService:
         top_k: int = 8,
         conversation_history: list[dict[str, Any]]
         | None = None,
-    ) -> dict[str, Any]:
+    ) -> Generator[dict[str, Any], None, None]:
 
         question = question.strip()
 
@@ -310,6 +349,36 @@ class RescueAnswerService:
         active_document = (
             self.document_manager.get_active_document()
         )
+
+        curriculum_selection = (
+            self._handle_curriculum_selection(
+                question=question,
+                conversation_history=conversation_history,
+                active_document=active_document,
+            )
+        )
+
+        if curriculum_selection is not None:
+            yield {
+                "type": "done",
+                "result": curriculum_selection,
+            }
+            return
+        
+        curriculum_year_selection = (
+            self._handle_curriculum_year_selection(
+                question=question,
+                conversation_history=conversation_history,
+                active_document=active_document,
+            )
+        )
+
+        if curriculum_year_selection is not None:
+            yield {
+                "type": "done",
+                "result": curriculum_year_selection,
+            }
+            return
 
         sections_path = (
             self.document_manager.storage_dir
@@ -338,6 +407,7 @@ class RescueAnswerService:
         curriculum_response = self._handle_curriculum_question(
             question=question,
             active_document=active_document,
+            conversation_history=conversation_history,
         )
 
         if curriculum_response is not None:
@@ -365,6 +435,19 @@ class RescueAnswerService:
                 12,
             ),
         )
+
+        print("\n========== RETRIEVER RETURNED ==========")
+
+        for i, chunk in enumerate(chunks[:15], 1):
+            print(
+                i,
+                chunk.get("chunk_id"),
+                chunk.get("page_number"),
+                chunk.get("heading"),
+                chunk.get("final_score"),
+            )
+
+        print("========================================")
 
         if not chunks:
 
@@ -423,10 +506,13 @@ class RescueAnswerService:
                 chunk_id
             )
 
-        context = self._build_context(
+        context_result = self._build_context(
             question=retrieval_query,
             chunks=chunks,
         )
+
+        context = context_result["context"]
+        selected_chunks = context_result["selected_chunks"]
 
         has_complex_table = any(
             bool(
@@ -473,7 +559,7 @@ class RescueAnswerService:
 
         page_references = (
             self._build_page_references(
-                chunks=chunks,
+                chunks=selected_chunks,
                 answer=answer,
                 complex_only=has_complex_table,
             )
@@ -586,6 +672,236 @@ class RescueAnswerService:
             "sources": [],
             "page_references": [],
         }
+    
+    def _handle_curriculum_selection(
+        self,
+        question: str,
+        conversation_history: list[dict[str, Any]] | None,
+        active_document: dict,
+    ):
+        if not conversation_history:
+            return None
+
+        last_assistant = None
+
+        for message in reversed(conversation_history):
+            if message.get("role") == "assistant":
+                last_assistant = message
+                break
+
+        if last_assistant is None:
+            return None
+
+        curriculum_route = (
+            last_assistant.get("curriculum_route", {}) or {}
+        )
+
+        if curriculum_route.get("status") != "awaiting_programme_selection":
+            return None
+
+        selection_map = {
+            "1": 0,
+            "one": 0,
+            "first": 0,
+            "2": 1,
+            "two": 1,
+            "second": 1,
+        }
+
+        selection = selection_map.get(
+            question.casefold().strip()
+        )
+
+        if selection is None:
+            return None
+
+        programme_matches = curriculum_route.get(
+            "programme_matches",
+            [],
+        )
+
+        if selection >= len(programme_matches):
+            return {
+                "question": question,
+                "answer": "Please choose one of the listed programmes.",
+                "status": "curriculum_ambiguous",
+                "sources": [],
+                "page_references": [],
+                "curriculum_route": curriculum_route,
+            }
+
+        selected = programme_matches[selection]
+
+        print("\n===== SELECTED PROGRAMME =====")
+        print(selected)
+        print("==============================\n")
+
+        route = {
+            "programme": selected["programme"],
+            "programme_code": selected["programme_code"],
+            "study_year": curriculum_route.get("study_year"),
+            "semester": curriculum_route.get("semester"),
+            "course_code": curriculum_route.get("course_code"),
+        }
+        #
+        # Ask for study year before retrieving anything.
+        #
+        if (
+            route["study_year"] is None
+            and route["course_code"] is None
+        ):
+            return {
+                "question": question,
+                "answer": (
+                    f"Which study year of {route['programme']} would you like to see?\n\n"
+                    "1. First Year\n"
+                    "2. Second Year\n"
+                    "3. Third Year\n"
+                    "4. Final Year"
+                ),
+                "status": "curriculum_year_selection",
+                "sources": [],
+                "page_references": [],
+                "curriculum_route": {
+                    **route,
+                    "status": "awaiting_study_year",
+                },
+            }
+
+        curriculum_retriever = CurriculumRetriever(
+            collection_name=self.collection_name,
+            document_id=active_document["document_id"],
+        )
+
+        records = curriculum_retriever.retrieve(
+            programme_code=route["programme_code"],
+            study_year=route.get("study_year"),
+            semester=route.get("semester"),
+            course_code=route.get("course_code"),
+            limit=200,
+        )
+
+        if not records:
+            return None
+
+        return {
+            "question": question,
+            "answer": self._format_curriculum_answer(
+                route=route,
+                records=records,
+            ),
+            "status": "curriculum_answered",
+            "sources": self._build_curriculum_sources(records),
+            "page_references": [],
+            "curriculum_route": route,
+        }
+    
+    def _handle_curriculum_year_selection(
+        self,
+        question: str,
+        conversation_history: list[dict[str, Any]] | None,
+        active_document: dict,
+    ):
+        if not conversation_history:
+            return None
+
+        last_assistant = None
+
+        for message in reversed(conversation_history):
+            if message.get("role") == "assistant":
+                last_assistant = message
+                break
+
+        if last_assistant is None:
+            return None
+
+        curriculum_route = (
+            last_assistant.get("curriculum_route", {}) or {}
+        )
+
+        if (
+            curriculum_route.get("status")
+            != "awaiting_study_year"
+        ):
+            return None
+
+        year_map = {
+            "1": "FIRST YEAR",
+            "1st": "FIRST YEAR",
+            "first": "FIRST YEAR",
+            "first year": "FIRST YEAR",
+
+            "2": "SECOND YEAR",
+            "2nd": "SECOND YEAR",
+            "second": "SECOND YEAR",
+            "second year": "SECOND YEAR",
+
+            "3": "THIRD YEAR",
+            "3rd": "THIRD YEAR",
+            "third": "THIRD YEAR",
+            "third year": "THIRD YEAR",
+
+            "4": "FINAL YEAR",
+            "4th": "FINAL YEAR",
+            "fourth": "FINAL YEAR",
+            "final": "FINAL YEAR",
+            "final year": "FINAL YEAR",
+        }
+
+        study_year = year_map.get(
+            question.casefold().strip()
+        )
+
+        if study_year is None:
+            return {
+                "question": question,
+                "answer": (
+                    "Please choose:\n\n"
+                    "1. First Year\n"
+                    "2. Second Year\n"
+                    "3. Third Year\n"
+                    "4. Final Year"
+                ),
+                "status": "curriculum_year_selection",
+                "sources": [],
+                "page_references": [],
+                "curriculum_route": curriculum_route,
+            }
+
+        route = {
+            **curriculum_route,
+            "study_year": study_year,
+        }
+
+        curriculum_retriever = CurriculumRetriever(
+            collection_name=self.collection_name,
+            document_id=active_document["document_id"],
+        )
+
+        records = curriculum_retriever.retrieve(
+            programme_code=route["programme_code"],
+            study_year=route["study_year"],
+            semester=None,
+            course_code=route.get("course_code"),
+            limit=200,
+        )
+
+        if not records:
+            return None
+
+        return {
+            "question": question,
+            "answer": self._format_curriculum_answer(
+                route=route,
+                records=records,
+            ),
+            "status": "curriculum_answered",
+            "sources": self._build_curriculum_sources(
+                records
+            ),
+            "page_references": [],
+            "curriculum_route": route,
+        }
 
 
     def _build_retrieval_query(
@@ -596,25 +912,6 @@ class RescueAnswerService:
 
         if not conversation_history:
             return question
-
-        entity_hint = self._conversation_entity_hint(
-            conversation_history[-4:]
-        )
-
-        if (
-            entity_hint
-            and not self._question_has_explicit_entity(
-                question
-            )
-            and entity_hint.casefold()
-            not in question.casefold()
-        ):
-
-            return (
-                question.rstrip(" \t\r\n?!.,")
-                + " "
-                + entity_hint
-            )
 
         normalized = question.casefold().strip()
 
@@ -631,6 +928,34 @@ class RescueAnswerService:
 
         if not is_ambiguous_follow_up:
             return question
+        
+        entity_hint = self._conversation_entity_hint(
+            conversation_history[-4:]
+        )
+
+        print("\n========== RETRIEVAL QUERY ==========")
+        print("QUESTION :", question)
+        print("ENTITY   :", entity_hint)
+        print(
+            "HAS ENTITY:",
+            self._question_has_explicit_entity(question),
+        )
+        print("====================================\n")
+
+        if (
+            entity_hint
+            and not self._question_has_explicit_entity(
+                question
+            )
+            and entity_hint.casefold()
+            not in question.casefold()
+        ):
+
+            return (
+                question.rstrip(" \t\r\n?!.,")
+                + " "
+                + entity_hint
+            )
 
         history_lines = []
 
@@ -801,6 +1126,104 @@ Rules:
             return best_candidate
 
         return None
+    
+
+    def _system_prompt(self) -> str:
+
+        return """
+    You are ProspectusAI.
+
+    Answer the user's question using ONLY the supplied
+    prospectus context.
+
+    The uploaded prospectus is the only source of truth.
+
+    Rules:
+    - Do not use outside knowledge.
+    - Do not invent facts.
+    - Do not assume the university, programme,
+      abbreviation, category, scheme, or year.
+    - Learn names, abbreviations, codes, meanings,
+      categories, and terminology from the supplied
+      prospectus context itself.
+    - The supplied context sections are ordered by
+      retrieval relevance. Give stronger weight to
+      earlier sections.
+    - Match the entity, department, programme, topic,
+      abbreviation, year, semester, or scheme in the
+      question to the most specific matching heading
+      and content.
+    - When a matching section explicitly contains the
+      requested fact, extract it and answer directly.
+    - Do not let unrelated sections about other
+      departments, programmes, people, schemes, or
+      topics create uncertainty about a clear answer
+      in the matching section.
+    - For labelled facts such as Chairperson, Code,
+      Course, Credit Hours, Semester, Fee, Category,
+      Facility, or Abbreviation, preserve the
+      relationship between the label and the value
+      shown in the matching section.
+    - For abbreviations, use the expansion supported
+      by the prospectus context and do not guess from
+      outside knowledge.
+    - For facilities and amenities, distinguish
+      between an explicitly confirmed facility and a
+      related activity or service.
+    - Answer the exact question asked.
+    - Give the direct answer first.
+    - Keep answers as short as the question allows.
+    - Do not explain how you found the answer.
+    - Do not narrate the retrieved context.
+    - Do not mention retrieval, vectors, chunks,
+      embeddings, or a knowledge graph.
+    - If the retrieved context contains the answer,
+      you MUST answer.
+    - Do not use the fallback unless the answer is
+      truly absent from the supplied context.
+    - Never include values from another heading
+      unless they directly answer the user's question.
+    
+    If the prospectus lists multiple valid values
+    for different hostels, programmes, schemes,
+    categories or accommodation types:
+
+    - Do not merge them into one value.
+    - Do not present them as a single fee.
+    - Explain that multiple charges exist.
+    - Organize the values by category.
+    """.strip()
+
+
+    def _user_prompt(
+        self,
+        *,
+        context: str,
+        question: str,
+        table_instruction: str,
+    ) -> str:
+
+        return f"""
+        {table_instruction}
+
+        If the supplied context genuinely does not contain
+        enough information to answer safely:
+
+        I couldn't reliably find the exact answer in the prospectus.
+
+        - Do not guess or infer missing information.
+        - If the context is sufficient to answer the question,
+          do not mention the official prospectus.
+
+        PROSPECTUS CONTEXT:
+
+        {context}
+
+        USER QUESTION:
+
+        {question}
+        """.strip()
+
 
 
     def _build_prompt(
@@ -834,81 +1257,11 @@ For table questions:
   separately.
 """
 
-        return f"""
-You are ProspectusAI.
-
-Answer the user's question using ONLY the supplied
-prospectus context.
-
-The uploaded prospectus is the only source of truth.
-
-Rules:
-- Do not use outside knowledge.
-- Do not invent facts.
-- Do not assume the university, programme,
-  abbreviation, category, scheme, or year.
-- Learn names, abbreviations, codes, meanings,
-  categories, and terminology from the supplied
-  prospectus context itself.
-- The supplied context sections are ordered by
-  retrieval relevance. Give stronger weight to
-  earlier sections.
-- Match the entity, department, programme, topic,
-  abbreviation, year, semester, or scheme in the
-  question to the most specific matching heading
-  and content.
-- When a matching section explicitly contains the
-  requested fact, extract it and answer directly.
-- Do not let unrelated sections about other
-  departments, programmes, people, schemes, or
-  topics create uncertainty about a clear answer
-  in the matching section.
-- For labelled facts such as Chairperson, Code,
-  Course, Credit Hours, Semester, Fee, Category,
-  Facility, or Abbreviation, preserve the
-  relationship between the label and the value
-  shown in the matching section.
-- For abbreviations, use the expansion supported
-  by the prospectus context and do not guess from
-  outside knowledge.
-- For facilities and amenities, distinguish
-  between an explicitly confirmed facility and a
-  related activity or service. Do not infer that a
-  facility exists merely from related wording.
-- Answer the exact question asked.
-- Give the direct answer first.
-- Keep answers as short as the question allows.
-- For a simple definition, abbreviation, code,
-  name, date, number, or other single fact, answer
-  in one sentence only.
-- Example style: "EL stands for Electronic
-  Engineering."
-- Do not explain how you found the answer.
-- Do not narrate the evidence or retrieved context.
-- Do not mention a page, heading, course code, or
-  supporting passage unless the user asks for it
-  or it is necessary to avoid ambiguity.
-- Give additional explanation only when the user
-  asks to explain, compare, summarize, or provide
-  details.
-- Do not mention retrieval, vectors, chunks,
-  embeddings, or a knowledge graph.
-- Do not claim information is missing when it is
-  clearly present in the context.
-{table_instruction}
-If the supplied context genuinely does not contain
-enough information to answer safely, reply exactly:
-
-I couldn't reliably find the exact answer in the prospectus.
-
-PROSPECTUS CONTEXT:
-
-{context}
-
-USER QUESTION:
-
-{question}
-""".strip()
+        return self._user_prompt(
+            context=context,
+            question=question,
+            table_instruction=table_instruction,
+        )
 
 
     def _stream_groq(
@@ -922,9 +1275,13 @@ USER QUESTION:
                 model=self.model,
                 messages=[
                     {
+                        "role": "system",
+                        "content": self._system_prompt(),
+                    },
+                    {
                         "role": "user",
                         "content": prompt,
-                    }
+                    },
                 ],
                 temperature=0.0,
                 max_tokens=max_tokens,
@@ -956,9 +1313,13 @@ USER QUESTION:
                 model=self.model,
                 messages=[
                     {
+                        "role": "system",
+                        "content": self._system_prompt(),
+                    },
+                    {
                         "role": "user",
                         "content": prompt,
-                    }
+                    },
                 ],
                 temperature=0.0,
                 max_tokens=max_tokens,
@@ -1078,6 +1439,18 @@ USER QUESTION:
             )
         ]
 
+        structured_people = [
+            chunk
+            for chunk in normal_chunks
+            if str(chunk.get("chunk_id", "")).startswith("structured-people")
+        ]
+
+        normal_chunks = [
+            chunk
+            for chunk in normal_chunks
+            if not str(chunk.get("chunk_id", "")).startswith("structured-people")
+        ]
+
         def context_relevance(
             chunk: dict[str, Any],
         ) -> tuple[int, int, float]:
@@ -1126,9 +1499,9 @@ USER QUESTION:
                 matched_terms -= 100
 
             return (
-                matched_terms,
-                heading_matches,
                 original_score,
+                heading_matches,
+                matched_terms,
             )
 
         normal_chunks.sort(
@@ -1144,18 +1517,46 @@ USER QUESTION:
         selected.extend(table_chunks[:2])
 # Focus normal chunks around the highest-ranked evidence instead of
 # mixing unrelated sections.
+        for person in structured_people:
+            if person not in selected:
+                selected.append(person)
+
+            if len(selected) >= 5:
+                break
+
         if normal_chunks:
 
             primary = normal_chunks[0]
 
-            selected.append(primary)
+            if primary not in selected:
+                selected.append(primary)
+
+            primary_score = float(primary.get("final_score", 0.0))
+
+            if primary_score >= 40:
+                min_score = primary_score * 0.75
+            elif primary_score >= 20:
+                min_score = primary_score * 0.65
+            else:
+                min_score = primary_score * 0.50
 
             primary_page = primary.get("page_number")
             primary_heading = (
                 primary.get("heading") or ""
             ).casefold()
 
+            primary_heading_number = str(
+                primary.get(
+                    "heading_number",
+                    "",
+                )
+            )
+
             for chunk in normal_chunks[1:]:
+                chunk_score = float(chunk.get("final_score", 0.0))
+
+                if chunk_score < min_score:
+                    continue
 
                 if len(selected) >= 5:
                     break
@@ -1169,24 +1570,96 @@ USER QUESTION:
                     chunk.get("heading") or ""
                 ).casefold()
 
+                current_heading_number = str(
+                    chunk.get(
+                        "heading_number",
+                        "",
+                    )
+                )
+
                 same_heading = (
                     heading == primary_heading
                     or primary_heading in heading
                     or heading in primary_heading
                 )
 
-                if same_page or same_heading:
-                    selected.append(chunk)
+                same_parent = False
+                same_chapter = False
+
+                if (
+                    primary_heading_number
+                    and current_heading_number
+                ):
+
+                    primary_parts = (
+                        primary_heading_number.split(".")
+                    )
+
+                    current_parts = (
+                        current_heading_number.split(".")
+                    )
+
+                    if (
+                        len(primary_parts) > 1
+                        and len(current_parts) > 1
+                        and primary_parts[:-1]
+                        == current_parts[:-1]
+                    ):
+                        same_parent = True
+
+                    elif (
+                        primary_parts[0]
+                        == current_parts[0]
+                    ):
+                        same_chapter = True
+
+                if (
+                    same_page
+                    or same_heading
+                    or same_parent
+                ):
+
+                    if chunk not in selected:
+                        selected.append(chunk)
+
+                elif (
+                    same_chapter
+                    and len(selected) < 4
+                    and chunk.get("final_score", 0.0)
+                        >= primary.get("final_score", 0.0) * 0.85
+                ):
+                    if chunk not in selected:
+                        selected.append(chunk)
 
     # Still not enough?
-            if len(selected) < 5:
+            if len(selected) < 3:
+
+                primary_score = float(
+                    primary.get(
+                        "final_score",
+                        0.0,
+                    )
+                )
+
+                minimum_score = primary_score * 0.60
 
                 for chunk in normal_chunks[1:]:
 
                     if chunk in selected:
                         continue
 
-                    selected.append(chunk)
+                    score = float(
+                        chunk.get(
+                            "final_score",
+                            0.0,
+                        )
+                    )
+
+                    if score < minimum_score:
+                        continue
+
+                    if chunk not in selected:
+                        selected.append(chunk)
 
                     if len(selected) >= 5:
                         break
@@ -1258,18 +1731,24 @@ USER QUESTION:
             sections.append(
                 "\n".join(
                     [
-                        f"[PDF PAGE {page_number}]",
+                        "=" * 60,
+                        "RETRIEVED SECTION",
+                        "=" * 60,
+                        f"PDF PAGE: {page_number}",
                         f"HEADING: {heading}",
                         f"HEADING NUMBER: {heading_number}",
                         f"HEADING LEVEL: {heading_level}",
+                        "",
+                        "CONTENT:",
                         final_content,
                     ]
                 )
             )
 
-        return "\n\n---\n\n".join(
-            sections
-        )
+        return {
+            "context": "\n\n".join(sections),
+            "selected_chunks": selected,
+        }
     
     def _analyze_context(
         self,
@@ -1451,6 +1930,12 @@ USER QUESTION:
         answer: str | None = None,
         complex_only: bool = False,
     ) -> list[dict[str, Any]]:
+        
+        active_document = self.document_manager.get_active_document()
+
+        official_url = str(
+            active_document.get("official_url") or ""
+        ).strip()
 
         cited_pages = self._extract_cited_pages(
             answer=answer,
@@ -1505,16 +1990,21 @@ USER QUESTION:
 
             seen.add(key)
 
+            page_url = None
+
+            if official_url:
+                page_url = (
+                    f"{official_url}#page={page_number}"
+                )
+
             references.append(
                 {
                     "document": document,
-                    "page_number": (
-                        page_number
-                    ),
+                    "page_number": page_number,
                     "page_path": None,
+                    "page_url": page_url,
                     "reason": (
-                        "Relevant complex "
-                        "prospectus table."
+                        "Relevant prospectus page."
                     ),
                 }
             )
@@ -1626,14 +2116,27 @@ USER QUESTION:
                 page_number,
             )
 
+            active_document = self.document_manager.get_active_document()
+
+            official_url = str(
+                active_document.get("official_url") or ""
+            ).strip()
+
+            page_url = None
+
+            if official_url:
+                page_url = (
+                    f"{official_url}#page={page_number}"
+                )
+
             references.append(
                 {
                     "document": document,
                     "page_number": page_number,
                     "page_path": None,
+                    "page_url": page_url,
                     "reason": (
-                        "Explicit page citation "
-                        "in answer."
+                        "Explicit page citation in answer."
                     ),
                 }
             )
@@ -1704,10 +2207,10 @@ USER QUESTION:
 
     def _handle_curriculum_question(
         self,
-        *,
         question: str,
         active_document: dict,
-    ) -> dict[str, Any] | None:
+        conversation_history: list[dict[str, Any]] | None,
+    ):
 
         records_path = (
             self.document_manager.storage_dir
@@ -1725,55 +2228,105 @@ USER QUESTION:
             records_path.read_text(encoding="utf-8")
         )
 
+        curriculum_metadata = payload.get(
+            "curriculum_metadata",
+            {},
+        )
+
+        curriculum_scheme = curriculum_metadata.get(
+            "curriculum_scheme",
+        )
+
+        term_names = curriculum_metadata.get(
+            "term_names",
+            [],
+        )
+
         curriculum_records = payload.get(
             "records",
             payload,
         )
 
-        programme_resolver = ProgrammeEntityResolver(
-            curriculum_records=curriculum_records,
-        )
+        print("\n===== AVAILABLE PROGRAMMES =====")
 
-        programme_matches = programme_resolver.resolve(
-            question
-        )
+        seen = set()
+
+        for record in curriculum_records:
+            key = (
+                record.get("programme_code"),
+                record.get("programme"),
+            )
+
+            if key not in seen:
+                seen.add(key)
+                print(key)
+
+        print("TOTAL:", len(seen))
+        print("===============================\n")
+
 
         route = self.curriculum_router.route(
             question=question,
-            curriculum_records=curriculum_records,
-            programme_matches=programme_matches,
+            curriculum_scheme=curriculum_scheme,
+            term_names=term_names,
         )
+
+        print("\n===== CURRICULUM ROUTE =====")
+        print(route)
+        print("============================\n")
+
+        if (
+            route is not None
+            and conversation_history
+        ):
+
+            for message in reversed(conversation_history):
+
+                if message.get("role") != "assistant":
+                    continue
+
+                previous_route = message.get("curriculum_route")
+
+                if not previous_route:
+                    continue
+
+                if route.get("programme_code") is None:
+                    route["programme_code"] = previous_route.get("programme_code")
+
+                if route.get("programme") is None:
+                    route["programme"] = previous_route.get("programme")
+
+                if route.get("study_year") is None:
+                    route["study_year"] = previous_route.get("study_year")
+
+                if route.get("semester") is None:
+                    route["semester"] = previous_route.get("semester")
+
+                break
 
         if route is None:
             return None
+        
+        resolver = ProgrammeEntityResolver(
+            curriculum_records=curriculum_records,
+        )
 
-        if route["status"] == "programme_not_found":
+        programme_matches = resolver.resolve(question)
+
+        if not programme_matches:
             return None
 
-        if route["status"] == "unsupported_study_year":
-            return {
-                "question": question,
-                "answer": (
-                    f"{route['programme_matches'][0]['programme']} "
-                    "does not have that study year in this prospectus. "
-                    "Its curriculum is listed for First Year, "
-                    "Second Year, Third Year, and Final Year."
-                ),
-                "status": "curriculum_not_found",
-                "sources": [],
-                "page_references": [],
-            }
+        if len(programme_matches) > 1:
 
-        if route["status"] == "programme_ambiguous":
             options = []
 
-            for item in route["programme_matches"]:
+            for item in programme_matches:
+
                 sample = next(
                     (
-                        record
-                        for record in curriculum_records
-                        if record.get("programme_code")
-                        == item["programme_code"]
+                        r
+                        for r in curriculum_records
+                        if r["programme_code"] == item["programme_code"]
                     ),
                     {},
                 )
@@ -1784,22 +2337,80 @@ USER QUESTION:
                     sample.get("parent_section", "") or ""
                 ).strip()
 
-                if parent:
+                if (
+                    "with specialization"
+                    not in label.casefold()
+                    and parent
+                ):
                     label += f" ({parent})"
 
                 options.append(label)
 
             return {
                 "question": question,
-                "answer": (
-                    "I found more than one matching programme. "
-                    "Please specify: "
-                    + "; ".join(options)
-                    + "."
-                ),
+                "answer":
+                    "I found more than one matching programme.\n\n"
+                    + "\n".join(
+                        f"{i+1}. {option}"
+                        for i, option in enumerate(options)
+                    ),
                 "status": "curriculum_ambiguous",
                 "sources": [],
                 "page_references": [],
+                "curriculum_route": {
+                    "status": "awaiting_programme_selection",
+                    "programme_matches": programme_matches,
+                    "study_year": route.get("study_year"),
+                    "semester": route.get("semester"),
+                    "course_code": route.get("course_code"),
+                },
+            }
+
+        programme = programme_matches[0]
+
+        route.update(
+            {
+                "programme": programme["programme"],
+                "programme_code": programme["programme_code"],
+            }
+        )
+
+
+        if route["status"] == "unsupported_study_year":
+            return {
+                "question": question,
+                "answer": (
+                    f"{programme['programme']} does not have that study year "
+                    "in this prospectus. Its curriculum is available only for "
+                    "First Year, Second Year, Third Year, and Final Year."
+                ),
+                "status": "curriculum_not_found",
+                "sources": [],
+                "page_references": [],
+            }
+        
+        # If the user only asked for the curriculum, ask for the study year first.
+        if (
+            route.get("study_year") is None
+            and route.get("course_code") is None
+        ):
+            return {
+                "question": question,
+                "answer": (
+                    f"Which study year of {route['programme']} would you like to see?\n\n"
+                    "1. First Year\n"
+                    "2. Second Year\n"
+                    "3. Third Year\n"
+                    "4. Final Year"
+                ),
+                "status": "curriculum_year_selection",
+                "sources": [],
+                "page_references": [],
+                "curriculum_route": {
+                    "status": "awaiting_study_year",
+                    "programme": route["programme"],
+                    "programme_code": route["programme_code"],
+                },
             }
 
         curriculum_retriever = CurriculumRetriever(
@@ -1827,6 +2438,15 @@ USER QUESTION:
             "status": "curriculum_answered",
             "sources": self._build_curriculum_sources(records),
             "page_references": [],
+
+            # Internal conversation state
+            "curriculum_route": {
+                "programme": route.get("programme"),
+                "programme_code": route.get("programme_code"),
+                "study_year": route.get("study_year"),
+                "semester": route.get("semester"),
+                "course_code": route.get("course_code"),
+            },
         }
 
 

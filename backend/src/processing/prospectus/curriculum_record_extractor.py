@@ -2,7 +2,12 @@
 from dataclasses import asdict, dataclass
 
 from bs4 import BeautifulSoup
+from enum import Enum
 
+class CurriculumScheme(str, Enum):
+    UNKNOWN = "unknown"
+    YEAR_TERM = "year_term"
+    SEMESTER = "semester"
 
 @dataclass(slots=True)
 class CurriculumRecord:
@@ -24,6 +29,11 @@ class CurriculumRecord:
 
 
 class CurriculumRecordExtractor:
+
+    def __init__(self):
+        self.curriculum_scheme = CurriculumScheme.UNKNOWN
+        self.term_names: list[str] = []
+
     PARENT_SECTION_PATTERN = re.compile(
         r"^(\d+\.\d+)\s+(.+)$"
     )
@@ -50,6 +60,8 @@ class CurriculumRecordExtractor:
         *,
         first_source_page: int = 38,
     ) -> list[CurriculumRecord]:
+        self.curriculum_scheme = CurriculumScheme.UNKNOWN
+        self.term_names = []
         records: list[CurriculumRecord] = []
 
         current_parent_section_code: str | None = None
@@ -60,6 +72,7 @@ class CurriculumRecordExtractor:
 
         for page_index, page in enumerate(markdown_pages):
             markdown = page.get("markdown", "")
+            self._detect_curriculum_scheme(markdown)
 
             if not markdown:
                 continue
@@ -387,6 +400,53 @@ class CurriculumRecordExtractor:
             return None
 
         return identity[1]
+    
+    def _detect_curriculum_scheme(
+        self,
+        text: str,
+    ) -> None:
+
+        upper = text.upper()
+
+        #
+        # Direct semester numbering.
+        #
+        if re.search(
+            r"\bSEMESTER\s*[1-9]\b",
+            upper,
+        ):
+            self.curriculum_scheme = (
+                CurriculumScheme.SEMESTER
+            )
+            return
+
+        #
+        # Year-term structure.
+        #
+        has_year = any(
+            year in upper
+            for year in self.STUDY_YEARS
+        )
+
+        terms = []
+
+        if "FALL" in upper:
+            terms.append("Fall")
+
+        if "SPRING" in upper:
+            terms.append("Spring")
+
+        if "SUMMER" in upper:
+            terms.append("Summer")
+
+        if "WINTER" in upper:
+            terms.append("Winter")
+
+        if has_year and len(terms) >= 2:
+            self.curriculum_scheme = (
+                CurriculumScheme.YEAR_TERM
+            )
+            self.term_names = terms[:2]
 
     def _find_study_year_text(
         self,
@@ -460,6 +520,19 @@ class CurriculumRecordExtractor:
             " ",
             text,
         ).strip()
+
+    def get_curriculum_metadata(
+        self,
+    ) -> dict:
+        """
+        Returns detected curriculum metadata for
+        the currently extracted document.
+        """
+
+        return {
+            "curriculum_scheme": self.curriculum_scheme.value,
+            "term_names": list(self.term_names),
+        }
 
     @staticmethod
     def _deduplicate(
