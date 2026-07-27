@@ -217,76 +217,81 @@ export function ChatWindow({
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex h-full flex-col">
-      <div
-        ref={scrollRef}
-        className="chat-scroll flex-1 space-y-4 overflow-y-auto px-1 py-4"
-      >
-        {isLoadingHistory && (
-          <div className="flex h-full items-center justify-center text-sm text-slate-400">
-            Loading conversation...
+  <div className="flex h-full flex-col">
+    <div
+      ref={scrollRef}
+      className="chat-scroll flex-1 space-y-6 overflow-y-auto px-6 py-6"
+    >
+      {isLoadingHistory && (
+        <div className="flex h-full items-center justify-center text-sm text-slate-400">
+          Loading conversation...
+        </div>
+      )}
+
+      {!isLoadingHistory && !hasMessages && (
+        <div className="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#163A6B] shadow-xl">
+            <span className="text-4xl">🎓</span>
           </div>
-        )}
 
-        {!isLoadingHistory && !hasMessages && (
-          <div className="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-gradient text-2xl shadow-soft">
-              🎓
-            </div>
+          <div>
+            <h2 className="text-4xl font-bold text-[#163A6B]">
+              Ask me anything about the NED Prospectus
+            </h2>
 
-            <div>
-              <h2 className="font-display text-xl font-semibold text-slate-800">
-                Ask me anything about the NED prospectus
-              </h2>
-              <p className="mt-1 max-w-sm text-sm text-slate-500">
-                Ask about admissions, eligibility, fees,
-                programmes, deadlines, and official
-                prospectus information.
-              </p>
-            </div>
+            <p className="mt-3 max-w-xl text-lg leading-8 text-slate-500">
+              Ask about admissions, eligibility, fees,
+              programmes, deadlines and official
+              prospectus information.
+            </p>
+          </div>
 
-            <ExampleChips
-              onSelect={handleSend}
-              disabled={isLoading}
+          <ExampleChips
+            onSelect={handleSend}
+            disabled={isLoading}
+          />
+        </div>
+      )}
+
+      {!isLoadingHistory &&
+        messages.map((message) => (
+          <MessageBubble
+            key={message.id}
+            message={message}
+          />
+        ))}
+
+      {isLoading && (
+        <div className="flex items-start gap-3 animate-fade-in-up">
+          {/* AI Avatar */}
+          <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-full bg-[#163A6B] text-white font-bold shadow-md">
+            AI
+          </div>
+
+          {/* Typing Bubble */}
+          <div className="flex items-center gap-2 rounded-3xl rounded-tl-md border border-slate-200 bg-white px-5 py-4 shadow-md">
+            <span
+              className="typing-dot h-2 w-2 rounded-full bg-[#163A6B]"
+              style={{ animationDelay: "0ms" }}
+            />
+            <span
+              className="typing-dot h-2 w-2 rounded-full bg-[#163A6B]"
+              style={{ animationDelay: "150ms" }}
+            />
+            <span
+              className="typing-dot h-2 w-2 rounded-full bg-[#163A6B]"
+              style={{ animationDelay: "300ms" }}
             />
           </div>
-        )}
-
-        {!isLoadingHistory &&
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-            />
-          ))}
-
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-sm border border-white bg-white px-4 py-3 shadow-card">
-              <span className="typing-dot h-1.5 w-1.5 rounded-full bg-brand-purple" />
-              <span
-                className="typing-dot h-1.5 w-1.5 rounded-full bg-brand-purple"
-                style={{ animationDelay: "150ms" }}
-              />
-              <span
-                className="typing-dot h-1.5 w-1.5 rounded-full bg-brand-purple"
-                style={{ animationDelay: "300ms" }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-2 shrink-0 space-y-2">
-
-        <ChatInput
-          onSend={handleSend}
-          isLoading={
-            isLoading || isLoadingHistory
-          }
-        />
-      </div>
+        </div>
+      )}
     </div>
-  );
-}
 
+    <div className="mt-4 shrink-0 border-t border-slate-200 bg-white pt-4">
+      <ChatInput
+        onSend={handleSend}
+        isLoading={isLoading || isLoadingHistory}
+      />
+    </div>
+  </div>
+); }
