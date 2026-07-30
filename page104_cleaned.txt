@@ -1,0 +1,294 @@
+﻿
+>             "page_number": 104,
+              "text": "NED UNIVERSITY\nUNDERGRADUATE\nOF ENGINEERING & 
+TECHNOLOGY\nPROSPECTUS 2026\n8.1 FEE AND CHARGES (NON-REFUNDABLE\n8.2 CHARGES UNDER 
+SELF-FINANCE SCHEME\n8.1.1. For Main Campus, LEJ and City Campus\na) Self-Finance Fee must 
+be paid in designated branches\na) Admission Fee to be paid once at the time of 
+Admission\nFor locals\nof the bank and copy of receipt/ challan enclosed\nwith Application 
+Form; which shall not be refunded if\nadmitted under the scheme on payment of Fee and\nAll 
+BE, BS & B. Arch except BS(CT\nCharges mentioned in Para 8.1 above\nBE(SE) & 
+BE(CS\nBS(CT), BE(SE) & BE(CS) Programmes\nRs. 57,000\nRs. 62,000\niii\ni\ni\nCategories 
+SF-1 to SF-5 Rs. 890,000/- +3% Tax\nCategories SF-6 to SF-11 Rs. 1,100,000/- +3% 
+Tax\nCandidates applying against more than one\nFor Foreigners\nRs.359,000\ncategory under 
+Self Finance Scheme may only\ndeposit Self Finance Fee for any one category\nb) Following 
+fee and charges to be paid at the start of\nIn case of difference in amount of Self 
+Finance\neach semester\nthe highest amount needs to be deposited\ni) Semester (Tuition & 
+Examination) Fee\n8.3 SECURITY DEPOSIT\nFor all BE, BS and B. Arch Programmes\nexcept 
+BS(CT), BE(SE) & BE(CS) *Rs. 56,600\nadmission fee to compensate breakage and / or 
+any\nSecurity deposit** of Rs.16,500/- is included in the\nFor Local BS(CT), BE(SE\nBE(CS) 
+Programmes\nRs. 62,600\nother damage, if any, caused by the student. This deposit\nor such 
+balance as may be available out of it, shall be\nrefunded to the student whenever he/she 
+ceases to be\nN8B\nEligible deserving students may be considered\nfor merit- or need-based 
+scholarships, subject to\nFor TIEST Rs 17,295\nstudent of the University\navailability of 
+funds\n8.4 MISCELLANEOUS FEE\nii) Students Facilitation 
+Charges\nRs.10,100\nDocument\nOrdinary Urgent\niii) Studio Fee (For Architecture\niv) 
+Bench Fee (For BS Chemistry only) *Rs. 1,800\nDepartment only\nRs. 2,200\na) Mark 
+Certificate\nb) Transcript\nc) Degree\nd) Duplicate Degree\nRs.10,350/- Rs.20,700\nRs. 
+1,750/- Rs. 3,000\nRs. 2,000/- Rs. 4,500\nRs. 3,450/- Rs. 6,900\nc) If applicable, fee 
+(Tuition and Examination) for one\ncourse *Rs. 8,000/- (*subject to revision\nf) 
+Re-totaling of Answer Rs. 2,500\ne) Provisional Certificate Rs. 4,500\nBook (per 
+script\n8.1.2. For Thar Institute of Engineering, Sciences and\nTechnology (TIEST\n8.5 
+HOSTEL CHARGES\na) Admission Fee to be paid\nonce at the time of Admission\nRs. 56,820\nNo 
+boarding will be provided by the University; however\ncanteen facilities are available. 
+Karachi residents are not eligible\nb) Following fee and charges to be paid at the start 
+of\n1. Muhammad Bin Qasim Hostel I & II & Girls Hostel\neach semester\ni) Semester 
+(Tuition\nExamination) Fee\nRs.62,600\na) Room Rent\nb) Service Charges\nDormitory\n1) 
+Cubicle\nRs.1,035/- per month\nRs.1,035/- per month\nRs. 805/- per month\nNB\nAll 
+deserving candidates are paid scholarship\n2. International Hostel\nagainst tuition fee 
+from Merit/Need based\nScholarship subject to the availability of funds\n3. New 
+Building\nDormitory\nRs.7,000/- per month\nii) Students Facilitation 
+Charges\nRs.15,280\nDormitory\nRs.3,000/- per month\np\nIf applicable, fee (Tuition and 
+Examination) for one\n4\nHostel Security Deposit (Refundable\ncourse *Rs. 8,000/- 
+(*subject to revision\ni) For Foreigners\ni\nFor Locals\nRs.5,000\nRs.20,000\nNB\nAll 
+hostel charges will be taken in advance on\nsemester basis\nwww.neduet.edu.pk\nNEPoid\n97",
+              "headings": [
+                  "NED UNIVERSITY",
+                  "OF ENGINEERING & TECHNOLOGY",
+                  "PROSPECTUS 2026",
+                  "8.1 FEE AND CHARGES (NON-REFUNDABLE",
+                  "8.2 CHARGES UNDER SELF-FINANCE SCHEME",
+                  "8.1.1. For Main Campus, LEJ and City Campus",
+                  "BE(SE) & BE(CS",
+                  "8.3 SECURITY DEPOSIT",
+                  "8.4 MISCELLANEOUS FEE",
+                  "8.1.2. For Thar Institute of Engineering, Sciences and",
+                  "8.5 HOSTEL CHARGES",
+                  "1. Muhammad Bin Qasim Hostel I & II & Girls Hostel",
+                  "2. International Hostel",
+                  "3. New Building"
+              ],
+              "paragraphs": [
+                  "UNDERGRADUATE",
+                  "a) Self-Finance Fee must be paid in designated branches",
+                  "a) Admission Fee to be paid once at the time of Admission",
+                  "For locals",
+                  "of the bank and copy of receipt/ challan enclosed",
+                  "with Application Form; which shall not be refunded if",
+                  "admitted under the scheme on payment of Fee and",
+                  "All BE, BS & B. Arch except BS(CT",
+                  "Charges mentioned in Para 8.1 above",
+                  "BS(CT), BE(SE) & BE(CS) Programmes",
+                  "Rs. 57,000",
+                  "Rs. 62,000",
+                  "iii",
+                  "i",
+                  "i",
+                  "Categories SF-1 to SF-5 Rs. 890,000/- +3% Tax",
+                  "Categories SF-6 to SF-11 Rs. 1,100,000/- +3% Tax",
+                  "Candidates applying against more than one",
+                  "For Foreigners",
+                  "Rs.359,000",
+                  "category under Self Finance Scheme may only",
+                  "deposit Self Finance Fee for any one category",
+                  "b) Following fee and charges to be paid at the start of",
+                  "In case of difference in amount of Self Finance",
+                  "each semester",
+                  "the highest amount needs to be deposited",
+                  "i) Semester (Tuition & Examination) Fee",
+                  "For all BE, BS and B. Arch Programmes",
+                  "except BS(CT), BE(SE) & BE(CS) *Rs. 56,600",
+                  "admission fee to compensate breakage and / or any",
+                  "Security deposit** of Rs.16,500/- is included in the",
+                  "For Local BS(CT), BE(SE",
+                  "BE(CS) Programmes",
+                  "Rs. 62,600",
+                  "other damage, if any, caused by the student. This deposit",
+                  "or such balance as may be available out of it, shall be",
+                  "refunded to the student whenever he/she ceases to be",
+                  "N8B",
+                  "Eligible deserving students may be considered",
+                  "for merit- or need-based scholarships, subject to",
+                  "For TIEST Rs 17,295",
+                  "student of the University",
+                  "availability of funds",
+                  "ii) Students Facilitation Charges",
+                  "Rs.10,100",
+                  "Document",
+                  "Ordinary Urgent",
+                  "iii) Studio Fee (For Architecture",
+                  "iv) Bench Fee (For BS Chemistry only) *Rs. 1,800",
+                  "Department only",
+                  "Rs. 2,200",
+                  "a) Mark Certificate",
+                  "b) Transcript",
+                  "c) Degree",
+                  "d) Duplicate Degree",
+                  "Rs.10,350/- Rs.20,700",
+                  "Rs. 1,750/- Rs. 3,000",
+                  "Rs. 2,000/- Rs. 4,500",
+                  "Rs. 3,450/- Rs. 6,900",
+                  "c) If applicable, fee (Tuition and Examination) for one",
+                  "course *Rs. 8,000/- (*subject to revision",
+                  "f) Re-totaling of Answer Rs. 2,500",
+                  "e) Provisional Certificate Rs. 4,500",
+                  "Book (per script",
+                  "Technology (TIEST",
+                  "a) Admission Fee to be paid",
+                  "once at the time of Admission",
+                  "Rs. 56,820",
+                  "No boarding will be provided by the University; however",
+                  "canteen facilities are available. Karachi residents are not eligible",
+                  "b) Following fee and charges to be paid at the start of",
+                  "each semester",
+                  "i) Semester (Tuition",
+                  "Examination) Fee",
+                  "Rs.62,600",
+                  "a) Room Rent",
+                  "b) Service Charges",
+                  "Dormitory",
+                  "1) Cubicle",
+                  "Rs.1,035/- per month",
+                  "Rs.1,035/- per month",
+                  "Rs. 805/- per month",
+                  "NB",
+                  "All deserving candidates are paid scholarship",
+                  "against tuition fee from Merit/Need based",
+                  "Scholarship subject to the availability of funds",
+                  "Dormitory",
+                  "Rs.7,000/- per month",
+                  "ii) Students Facilitation Charges",
+                  "Rs.15,280",
+                  "Dormitory",
+                  "Rs.3,000/- per month",
+                  "p",
+                  "If applicable, fee (Tuition and Examination) for one",
+                  "4",
+                  "Hostel Security Deposit (Refundable",
+                  "course *Rs. 8,000/- (*subject to revision",
+                  "i) For Foreigners",
+                  "i",
+                  "For Locals",
+                  "Rs.5,000",
+                  "Rs.20,000",
+                  "NB",
+                  "All hostel charges will be taken in advance on",
+                  "semester basis",
+                  "www.neduet.edu.pk",
+                  "NEPoid",
+                  "97"
+              ],
+              "lists": [],
+              "sections": [
+                  {
+                      "heading": "NED UNIVERSITY",
+                      "heading_number": "",
+                      "heading_level": 1,
+                      "heading_title": "NED UNIVERSITY",
+                      "content": [
+                          "UNDERGRADUATE"
+                      ],
+                      "metadata": {
+                          "heading_number": "",
+                          "heading_level": 1,
+                          "heading_title": "NED UNIVERSITY"
+                      }
+                  },
+                  {
+                      "heading": "OF ENGINEERING & TECHNOLOGY",
+                      "heading_number": "",
+                      "heading_level": 1,
+                      "heading_title": "OF ENGINEERING & TECHNOLOGY",
+                      "content": [],
+                      "metadata": {
+                          "heading_number": "",
+                          "heading_level": 1,
+                          "heading_title": "OF ENGINEERING & TECHNOLOGY"
+                      }
+                  },
+                  {
+                      "heading": "PROSPECTUS 2026",
+                      "heading_number": "",
+                      "heading_level": 1,
+                      "heading_title": "PROSPECTUS 2026",
+                      "content": [],
+                      "metadata": {
+                          "heading_number": "",
+                          "heading_level": 1,
+                          "heading_title": "PROSPECTUS 2026"
+                      }
+                  },
+                  {
+                      "heading": "8.1 FEE AND CHARGES (NON-REFUNDABLE",
+                      "heading_number": "8.1",
+                      "heading_level": 2,
+                      "heading_title": "FEE AND CHARGES (NON-REFUNDABLE",
+                      "content": [],
+                      "metadata": {
+                          "heading_number": "8.1",
+                          "heading_level": 2,
+                          "heading_title": "FEE AND CHARGES (NON-REFUNDABLE"
+                      }
+                  },
+                  {
+                      "heading": "8.2 CHARGES UNDER SELF-FINANCE SCHEME",
+                      "heading_number": "8.2",
+                      "heading_level": 2,
+                      "heading_title": "CHARGES UNDER SELF-FINANCE SCHEME",
+                      "content": [],
+                      "metadata": {
+                          "heading_number": "8.2",
+                          "heading_level": 2,
+                          "heading_title": "CHARGES UNDER SELF-FINANCE SCHEME"
+                      }
+                  },
+                  {
+                      "heading": "8.1.1. For Main Campus, LEJ and City Campus",
+                      "heading_number": "8.1.1",
+                      "heading_level": 3,
+                      "heading_title": "For Main Campus, LEJ and City Campus",
+                      "content": [
+                          "a) Self-Finance Fee must be paid in designated branches",
+                          "a) Admission Fee to be paid once at the time of Admission",
+                          "For locals",
+                          "of the bank and copy of receipt/ challan enclosed",
+                          "with Application Form; which shall not be refunded if",
+                          "admitted under the scheme on payment of Fee and",
+                          "All BE, BS & B. Arch except BS(CT",
+                          "Charges mentioned in Para 8.1 above"
+                      ],
+                      "metadata": {
+                          "heading_number": "8.1.1",
+                          "heading_level": 3,
+                          "heading_title": "For Main Campus, LEJ and City Campus"
+                      }
+                  },
+                  {
+                      "heading": "BE(SE) & BE(CS",
+                      "heading_number": "",
+                      "heading_level": 1,
+                      "heading_title": "BE(SE) & BE(CS",
+                      "content": [
+                          "BS(CT), BE(SE) & BE(CS) Programmes",
+                          "Rs. 57,000",
+                          "Rs. 62,000",
+                          "iii",
+                          "i",
+                          "i",
+                          "Categories SF-1 to SF-5 Rs. 890,000/- +3% Tax",
+                          "Categories SF-6 to SF-11 Rs. 1,100,000/- +3% Tax",
+                          "Candidates applying against more than one",
+                          "For Foreigners",
+                          "Rs.359,000",
+                          "category under Self Finance Scheme may only",
+                          "deposit Self Finance Fee for any one category",
+                          "b) Following fee and charges to be paid at the start of",
+                          "In case of difference in amount of Self Finance",
+                          "each semester",
+                          "the highest amount needs to be deposited",
+                          "i) Semester (Tuition & Examination) Fee"
+                      ],
+                      "metadata": {
+                          "heading_number": "",
+                          "heading_level": 1,
+                          "heading_title": "BE(SE) & BE(CS"
+                      }
+                  },
+                  {
+                      "heading": "8.3 SECURITY DEPOSIT",
+                      "heading_number": "8.3",
+                      "heading_level": 2,
+                      "heading_title": "SECURITY DEPOSIT",
+                      "content": [
+                          "For all BE, BS and B. Arch Programmes",
+
+

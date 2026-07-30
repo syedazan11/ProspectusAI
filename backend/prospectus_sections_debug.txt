@@ -1,0 +1,2360 @@
+========================================================================================================================
+SECTION #1
+PAGE: 85
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF I
+02. ENGINEERING
+03. TECHNOLOGY
+04. KARACHI
+05. Total
+06. 1.1
+07. 23
+08. 2
+09. 7
+10. 4
+11. 11
+12. 9
+13. 37
+14. 36
+15. 4
+16. 4
+17. 9
+18. 4
+19. 2
+20. 4
+21. 18
+22. 4
+23. 28
+24. TMG TEG
+25. 1
+26. 0
+27. 0
+28. 1
+29. 1
+30. 0
+31. 0
+32. 1
+33. 1
+34. 0
+35. 0
+36. 0
+37. 0
+38. 0
+39. 0
+40. 0
+41. 0
+42. 5
+43. 1
+44. 0
+45. 0
+46. 1
+47. 1
+48. 0
+49. 1
+50. 0
+51. 0
+52. 0
+53. 0
+54. 0
+55. 0
+56. 0
+57. 0
+58. 4
+59. TCE
+60. 1
+61. 0
+62. 0
+63. 0
+64. 0
+65. 0
+66. 0
+67. 1
+68. 0
+69. 0
+70. 0
+71. 0
+72. 0
+73. 0
+74. 0
+75. 0
+76. 0
+77. 5
+78. TCT
+79. fa
+80. 1
+81. 0
+82. 2
+83. 0
+84. 0
+85. Aga Khan
+86. 0
+87. 0
+88. 0
+89. 0
+90. 0
+91. 0
+92. 0
+93. 0
+94. 0
+95. 0
+96. 6
+97. 8
+98. Mathematics
+99. 1
+100. 2
+101. 1
+102. 1
+103. 0
+104. 0
+105. 1
+106. 1
+107. 0
+108. 0
+109. 0
+110. 0
+111. 0
+112. 0
+113. 1
+114. 0
+115. 4
+116. 2
+117. 1
+118. 1
+119. 0
+120. Exam
+121. 0
+122. Science/Commerce/Arts
+123. 0
+124. 1
+125. 1
+126. 0
+127. 0
+128. 0
+129. 0
+130. 0
+131. 0
+132. 0
+133. 0
+134. 0
+135. B
+136. Arch
+137. 2
+138. 0
+139. 2
+140. 0
+141. 0
+142. I other than Karachi
+143. Foreign
+144. 0
+145. 0
+146. 1
+147. 1
+148. 0
+149. 0
+150. 0
+151. 0
+152. 0
+153. 0
+154. 0
+155. 0
+156. 0
+157. 12
+158. 2
+159. 4
+160. 2
+161. 0
+162. 0
+163. 0
+164. 0
+165. 0
+166. 0
+167. 0
+168. 2
+169. 0
+170. 0
+171. TS
+172. 5
+173. 0
+174. 0
+175. 0
+176. 8
+177. 0
+178. 0
+179. 1
+180. 1
+181. 1
+182. 0
+183. 0
+184. 0
+185. 0
+186. 0
+187. 0
+188. 0
+189. 0
+190. DS
+191. Arts Mathematics
+192. 4
+193. r Science/Commerce/Arts/Arts
+194. 0
+195. 1
+196. 1
+197. 1
+198. Board
+199. Federal
+200. 0
+201. 0
+202. 0
+203. Staff
+204. 1
+205. 0
+206. 0
+207. 0
+208. 0
+209. 0
+210. 0
+211. 1
+212. 0
+213. 0
+214. CF
+215. 13
+216. 1
+217. 0
+218. 0
+219. 0
+220. 0
+221. Karachi
+222. 0
+223. 1
+224. 0
+225. 0
+226. 0
+227. 0
+228. 0
+229. 0
+230. 1
+231. 0
+232. 3
+233. IC
+234. 4
+235. 0
+236. 0
+237. 0
+238. 0
+239. from
+240. Ziauddin
+241. 0
+242. 0
+243. Non-Teaching
+244. 0
+245. 1
+246. 0
+247. 0
+248. 0
+249. 0
+250. 0
+251. 1
+252. 0
+253. Baltistan
+254. 0
+255. Hd
+256. 4
+257. 1
+258. 0
+259. 0
+260. 0
+261. 0
+262. University Teachers
+263. 0
+264. 1
+265. 1
+266. Family
+267. 0
+268. 0
+269. 0
+270. 0
+271. Balochistan
+272. 0
+273. 0
+274. 0
+275. 0
+276. C
+277. Science
+278. 12
+279. 2
+280. 9
+281. 0
+282. 0
+283. 0
+284. Education
+285. 5
+286. 5
+287. 0
+288. 0
+289. Foundation
+290. 0
+291. 0
+292. 0
+293. 0
+294. 0
+295. 0
+296. of Gilgit E
+297. 0
+298. SS
+299. 7
+300. 1
+301. Pre-Medical
+302. 0
+303. Commerce
+304. 0
+305. Arts
+306. 0
+307. Nawabshah, 2
+308. 0
+309. 0
+310. University
+311. 1
+312. 0
+313. Dinshaw
+314. 0
+315. 0
+316. of UET Lahore/Taxila
+317. 0
+318. of UET Peshawar
+319. 0
+320. 0
+321. FATA
+322. 0
+323. of Government of Kashmir
+324. 0
+325. 0
+326. BM
+327. 5
+328. 1
+329. 4
+330. 0
+331. 0
+332. Science/Commerce/Arts) f
+333. 0
+334. kara-i eh uter
+335. 0
+336. 2
+337. 1
+338. 0
+339. 0
+340. 2
+341. 0
+342. 0
+343. 0
+344. of
+345. 0
+346. 0
+347. 0
+348. FD
+349. Computer
+350. 2
+351. 0
+352. 0
+353. A-Levels
+354. 0
+355. I of Intermediate
+356. 0
+357. 0
+358. oo
+359. 0
+360. ff
+361. 0
+362. 0
+363. Government
+364. 0
+365. Nominees
+366. 0
+367. 0
+368. of Government
+369. 0
+370. P
+371. 4
+372. 0
+373. A-Level
+374. 0
+375. A-Level
+376. 0
+377. 0
+378. Larkana
+379. 0
+380. 0
+381. Son/Daughter of NED
+382. Outstanding
+383. 0
+384. 0
+385. 0
+386. 0
+387. 0
+388. 0
+389. 0
+390. 0
+391. MM
+392. 2
+393. Pre-Engineering/Pre-Medical/Computer S
+394. 1
+395. 0
+396. 0
+397. 0
+398. 0
+399. 1
+400. 0
+401. Nominees
+402. 0
+403. Nominees
+404. 0
+405. Nominees
+406. 0
+407. Nominees
+408. 0
+409. of
+410. 0
+411. 0
+412. 0
+413. 2
+414. 1
+415. 0
+416. 0
+417. 0
+418. Sukkur
+419. 0
+420. Board
+421. 0
+422. Son/Daughter of NED
+423. 0
+424. 0
+425. 0
+426. 0
+427. 0
+428. Nominees
+429. 0
+430. 0
+431. Nominees
+432. 0
+433. 0
+434. I (Pre-Engineering
+435. 9
+436. 2
+437. 0
+438. 0
+439. 0
+440. 0
+441. 0
+442. 0
+443. 0
+444. 0
+445. 0
+446. 0
+447. 0
+448. Nominees
+449. 0
+450. 5
+451. 0
+452. 0
+453. 0
+454. 0
+455. from
+456. 0
+457. Real
+458. 1
+459. 1
+460. 0
+461. 0
+462. 0
+463. 0
+464. 0
+465. 1
+466. 2
+467. 0
+468. 0
+469. SS
+470. 2
+471. 1
+472. 0
+473. 0
+474. 0
+475. Mirpurkhas
+476. 0
+477. 0
+478. Real
+479. 1
+480. 0
+481. 1
+482. 0
+483. 0
+484. 0
+485. 1
+486. 2
+487. 0
+488. 0
+489. TC
+490. A-Level
+491. 3
+492. 1
+493. 0
+494. 0
+495. 0
+496. 0
+497. Division
+498. 0
+499. 0
+500. 0
+501. 0
+502. 0
+503. 0
+504. 0
+505. 0
+506. 0
+507. 0
+508. E
+509. 8
+510. 1
+511. 0
+512. 0
+513. 0
+514. HSc--uter
+515. 0
+516. 2
+517. 2
+518. 0
+519. 0
+520. 0
+521. 2
+522. 1
+523. 0
+524. 2
+525. 2
+526. 0
+527. ME
+528. AU
+529. 3
+530. Equivalent
+531. 0
+532. 0
+533. 0
+534. Hyderabad
+535. 0
+536. City
+537. 0
+538. 0
+539. 0
+540. 0
+541. 0
+542. 0
+543. 0
+544. 0
+545. 0
+546. 0
+547. 0
+548. 0
+549. M
+550. 5
+551. 0
+552. 0
+553. 0
+554. 0
+555. 0
+556. 2
+557. 2
+558. 0
+559. 0
+560. 1
+561. 0
+562. 0
+563. 0
+564. 0
+565. 0
+566. 0
+567. TE
+568. 4
+569. 1
+570. 0
+571. 1
+572. 0
+573. 1
+574. 2
+575. 0
+576. 0
+577. 1
+578. 0
+579. 0
+580. 0
+581. 0
+582. 0
+583. 0
+584. ME
+585. 10
+586. Grade
+587. 1
+588. 0
+589. Rural Areas
+590. 0
+591. 2
+592. 2
+593. 0
+594. 1
+595. 0
+596. 2
+597. 1
+598. 1
+599. 2
+600. 0
+601. 0
+602. CE
+603. CN
+604. 3
+605. 12th
+606. 0
+607. 0
+608. 0
+609. 0
+610. 0
+611. 0
+612. 0
+613. 0
+614. 0
+615. 0
+616. 0
+617. 0
+618. 0
+619. 0
+620. 0
+621. 0
+622. PE
+623. 3
+624. 0
+625. 0
+626. 0
+627. 1
+628. 0
+629. 1
+630. 1
+631. 0
+632. 0
+633. 0
+634. 0
+635. 0
+636. 0
+637. 0
+638. 0
+639. 0
+640. CE
+641. 3
+642. 4
+643. 1
+644. 0
+645. 0
+646. 0
+647. 2
+648. 0
+649. 2
+650. 0
+651. 1
+652. 0
+653. 0
+654. 0
+655. 0
+656. 0
+657. 0
+658. 0
+659. CE
+660. 3
+661. 1
+662. 0
+663. 1
+664. 3
+665. 1
+666. 1
+667. 1
+668. 1
+669. 0
+670. 0
+671. 0
+672. 1
+673. 4
+674. 2
+675. Category
+676. R-4(a
+677. R-4(c
+678. R-4(d
+679. R-4(e
+680. R-4(f
+681. R-5
+682. R-6
+683. R-7(a
+684. R-7(b
+685. R-9
+686. R-10(a
+687. R-10(b
+688. R-11(a
+689. R-11(b
+690. R-12(a
+691. R-12(b
+692. R-12(c
+693. R-12(d
+694. 78
+695. www.neduet.edu.pk
+696. NEDUETOfficial
+697. 回
+698. 0
+
+========================================================================================================================
+SECTION #2
+PAGE: 86
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. 1
+02. 5
+03. 9
+04. 1
+05. 1
+06. 1
+07. 4
+08. 5
+09. 2483
+10. TMG TEG Total
+11. 0
+12. 0
+13. 0
+14. 0
+15. 0
+16. 0
+17. 0
+18. 0
+19. 0
+20. 0
+21. 0
+22. 0
+23. 0
+24. 0
+25. 0
+26. 50
+27. 50
+28. TCE
+29. τCT
+30. 0
+31. 0
+32. 0
+33. 0
+34. 0
+35. 0
+36. 0
+37. 0
+38. 0
+39. 0
+40. 0
+41. 0
+42. 50
+43. 40
+44. 0
+45. 0
+46. 0
+47. 0
+48. 0
+49. 0
+50. 0
+51. 0
+52. 0
+53. 0
+54. 0
+55. 120
+56. 32
+57. Computational Finance
+58. Development Studies
+59. Textile Sciences
+60. Management Sciences
+61. English Linguistics
+62. Economics & Finance
+63. Computer Science at TIEST
+64. Civil Engineering at TIEST
+65. Management Sciences
+66. B
+67. NG
+68. Arch
+69. 0
+70. 0
+71. 0
+72. 0
+73. 0
+74. 0
+75. 0
+76. 0
+77. 0
+78. 0
+79. 0
+80. 0
+81. 0
+82. Islamabad
+83. 0
+84. 0
+85. 33
+86. Physics
+87. Chemistry
+88. English
+89. DS
+90. S
+91. 0
+92. 0
+93. 0
+94. 0
+95. 0
+96. 0
+97. 0
+98. 0
+99. 0
+100. 0
+101. 0
+102. f Finance
+103. 0
+104. 28
+105. PF
+106. CF
+107. DS
+108. TS
+109. NG
+110. TCT
+111. TCE
+112. TMG
+113. TEG
+114. CF
+115. IC
+116. of Pakistan
+117. 0
+118. 0
+119. 0
+120. 0
+121. 0
+122. 0
+123. 0
+124. 0
+125. 0
+126. 0
+127. 0
+128. ASF
+129. 0
+130. 0
+131. Ministry
+132. 70
+133. Hd
+134. S
+135. CT
+136. Govt
+137. 0
+138. 0
+139. 0
+140. Kashmir
+141. 0
+142. 0
+143. Army
+144. 0
+145. 0
+146. 0
+147. Navy
+148. 0
+149. 0
+150. 0
+151. Air Force
+152. 0
+153. 0
+154. 1
+155. Rangers
+156. 0
+157. 0
+158. Forces
+159. 0
+160. 0
+161. 0
+162. Division
+163. 0
+164. 0
+165. 70
+166. Engineering
+167. BM
+168. FD
+169. Education
+170. of
+171. 0
+172. Occupied
+173. 0
+174. G.H.Q
+175. ff
+176. of
+177. N.H.Q
+178. 0
+179. P.A.F
+180. of I
+181. 0
+182. 0
+183. of Sindh F
+184. 0
+185. Security F
+186. 0
+187. Affairs
+188. 0
+189. 63
+190. 38
+191. Engineering
+192. Engineering
+193. Engineering
+194. Aplsd eg s i t e i eg e ee e ste e s u i e osse sogy
+195. Adpitee e s e e ste e is e s e r sse e eton
+196. om o otle ei ot i t eii s otsds ei eo s ic too
+197. P
+198. MM
+199. of Ministry
+200. 0
+201. Indian
+202. 0
+203. 0
+204. Nominees
+205. 0
+206. 0
+207. Nominees
+208. 0
+209. 0
+210. Nominees
+211. 0
+212. 0
+213. 0
+214. Nominees
+215. 0
+216. of
+217. inees
+218. by
+219. Economi
+220. 51
+221. Electronic Engineering
+222. Chemical E
+223. Metallurgical Engineering
+224. Materials E
+225. Polymer & Petrochemical
+226. Food Engineering
+227. Biomedical
+228. Software Engineering
+229. Computer Science
+230. Architecture
+231. EL
+232. Nominees
+233. 0
+234. 0
+235. Nominees
+236. 0
+237. 0
+238. 0
+239. 0
+240. 0
+241. 0
+242. Nom
+243. 0
+244. Nominated
+245. 0
+246. 0
+247. M
+248. MM
+249. P
+250. F
+251. BM
+252. ES
+253. CT
+254. B. Arch
+255. sea e s s,tes o eee i et eord otees t o e e srit
+256. Ma tte nrs - e e t t s tse
+257. S3
+258. TC
+259. 0
+260. 0
+261. 0
+262. 0
+263. 0
+264. 0
+265. 0
+266. 0
+267. 0
+268. 0
+269. Candidates I
+270. 96
+271. ME
+272. E
+273. AU
+274. 0
+275. 0
+276. 2
+277. 0
+278. 0
+279. 0
+280. 0
+281. 0
+282. 0
+283. 0
+284. 0
+285. Foreign
+286. 6
+287. 36
+288. M
+289. TE
+290. 0
+291. 0
+292. 0
+293. 0
+294. 0
+295. 0
+296. 0
+297. 0
+298. 0
+299. 0
+300. 0
+301. 0
+302. 65
+303. 9
+304. IEngineering (Specialisation in Automotive
+305. CE
+306. ME
+307. CN
+308. 0
+309. 0
+310. 0
+311. 2
+312. 0
+313. 0
+314. 0
+315. 0
+316. 0
+317. 0
+318. 0
+319. 0
+320. 8
+321. Engineering (Specialisation in Urban
+322. Civil Engineering (Specialisation in Construction
+323. Industrial & Manufacturing Engineering
+324. Engineering
+325. Anatomy and Biochemistry
+326. CE
+327. PE
+328. 3
+329. 0
+330. 0
+331. 0
+332. 0
+333. 0
+334. 0
+335. 0
+336. 0
+337. 0
+338. 0
+339. 0
+340. 0
+341. 0
+342. 0
+343. 0
+344. 0
+345. 36
+346. 70
+347. abbreviations
+348. Civil Engineering
+349. Petroleum Engineering
+350. I Engineering
+351. Textile Engineering
+352. Electrical Engineering
+353. Telecommunications E
+354. Computer Systems Engineering
+355. CE
+356. 0
+357. 2
+358. 2
+359. 0
+360. 0
+361. 58
+362. Civil
+363. Mechanical
+364. Mechanical
+365. 川
+366. Category
+367. R-12(e
+368. R-12(f
+369. R-13(a
+370. R-13(b
+371. R-13(c
+372. R-13(d
+373. R-13(e
+374. R-14
+375. TOTAL
+376. for
+377. Key
+378. E
+379. CE(UE
+380. PE
+381. CE(CN
+382. ME
+383. TE
+384. M
+385. ME(AU
+386. E
+387. TC
+388. SS
+389. NB
+390. www.neduet.edu.pk
+391. NEDUETOfficial
+392. 回
+393. f
+394. 0
+395. 79
+
+========================================================================================================================
+SECTION #3
+PAGE: 87
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+02. 5.1(ii
+03. Description of Categories
+04. R-3(c
+05. Candidates having passed HSC(Commerce) Part I
+06. II Examinations from Aga Khan Board
+07. R-1(a
+08. Candidates having passed HSC (Pre-Engineering/ Computer
+09. Science) / Arts (Mathematics) Part I & Il Examinations from
+10. R-3(d
+11. Candidates having passed HSC(Pre-Medical) Part I
+12. Board of Intermediate Education, Karachi
+13. II Examinations from Aga Khan Board
+14. R-1(b
+15. Candidates having passed HSC(Pre-Medical) Part I & II
+16. N.B
+17. inter-transferable, whenever considered necessary by
+18. The seats between sub-categories R-3(b) to R-3(d) are
+19. Karachi
+20. Examinations from Board of Intermediate Education
+21. the University
+22. R-1(c
+23. Candidates having passed HSC(Commerce) Part I & II
+24. R-3(e
+25. Candidates having passed HSC (Pre-Engineering/ PreMedical / Computer Science / Commerce/ Arts) Part I & II
+26. Karachi
+27. Examinations from Board of intermediate Education
+28. Examinations from Ziauddin University Education Board
+29. R-1(d
+30. Candidates having passed HSC(Arts) Part I & II
+31. R-4(a
+32. Candidates having passed Foreign Examination (A-Level
+33. Cambridge/London/Oxford) equivalent to HSC (PreKarachi
+34. Examinations from Board of Intermediate Education
+35. Engineering / Computer Science) / Arts (Mathematics
+36. Examination
+37. R-1(e
+38. Technical Education (SBTE
+39. Candidates having passed DAE from Sindh Board of
+40. R-4(c
+41. Candidates having passed Foreign Examination (12th
+42. Grade or Others) equivalent to HSC (Pre-Engineering/ PreR-1(f
+43. Candidates having disability (excluding the disability of
+44. Medical / Computer Science / Commerce / Arts / Arts
+45. deafness, and dumbness) and passed HŠC (Pre-Engineering
+46. Mathematics)) Examination
+47. and Il from any Board of Intermediate Education situated in
+48. Pre-Medical / Computer Science / Commerce/ Arts) Part I
+49. R-4(d
+50. Candidates having passed foreign Examination (A Level
+51. province of Sindh and having certificate of disability from
+52. Medical) Examination
+53. Cambridge/London/Oxford) equivalent to HSC (PreDepartment of Empowerment of Persons with Disabilities
+54. DÉPD), Government of Sindh. Such candidates may be
+55. R-4(e
+56. Candidates having passed Foreign Examination (A Level
+57. required to appear before medical board
+58. Cambridge/ London/Oxford) equivalent to HSC
+59. Commerce) Examinations
+60. R-1(g
+61. Candidates who are residents of Pakistan, belong to
+62. religious minorities and have passed HSC (PreR-4(f
+63. Candidates having passed Foreign Examination (A Level
+64. Engineering/ Pre-Medical / Computer Science / Commerce
+65. Examinations
+66. Cambridge/ London/Oxford) equivalent to HSC (Arts
+67. Arts) Part I and II from Board of Intermediate Education
+68. or equivalent foreign examination as recognized by the
+69. N.B
+70. The seats between sub-categories R-4(a) to R-4(f) are
+71. University
+72. inter-transferable, whenever considered necessary by
+73. the University
+74. R-2(a
+75. Candidates having passed HSC (Pre-Engineering/PreMedical/ Computer Science/Commerce/Arts) Part I & II
+76. R-5
+77. Candidates having passed HSC (Pre-Engineering/PreExaminations from Board of Intermediate & Secondary
+78. Examinations from any Board other than Karachi, Aga
+79. Medical /Computer Science/Commerce/Arts) Part I & II
+80. Education, Hyderabad
+81. Khan, Ziauddin, Hyderabad, Mirpurkhas, Sukkur, Larkana
+82. R-2(b
+83. Candidates having passed HSC (Pre-Engineering/PreNawabshah, Federal Board and Foreign Examinations
+84. Examinations from Board of Intermediate & Secondary
+85. Medical/Computer Science/Commerce/Arts) Part I &II
+86. R-6
+87. Candidates who are residents of Rural Area of
+88. Education, Mirpurkhas
+89. Engineering/Pre-Medical/ Computer Science/Commerce
+90. Karachi Division and have passed HSC (PreR-2(c
+91. Candidates having passed HSC (Pre-Engineering/Pre
+92. Arts) Part-I & Part-II Examination from Board of
+93. Medical/Computer Science/Commerce/Arts) Part I &II
+94. Intermediate Education, Karachi and have passed PreEducation, Sukkur
+95. Examinations from Board of Intermediate & Secondary
+96. Admission Entry Test of this University with at least 50
+97. marks. Candidates having passed Matriculation / SSC
+98. R-2(d
+99. Candidates having passed HSC (Pre-Engineering/Prefrom any school located in any Rural Area of the Karachi
+100. Medical/Computer Science/Commerce/Arts) Part I & II
+101. shall be given the preference
+102. Education, Larkana
+103. Examinations from Board of Intermediate & Secondary
+104. R-7(a
+105. Candidates - Real Sons/Real Daughters of the NED
+106. University Teachers are eligible for admission provided that
+107. R-2(e
+108. Candidates having passed HSC (Pre-Engineering/PreMedical/Computer Science/Commerce/Arts) Part I & II
+109. i) The candidate has passed HSC/Equivalent
+110. Examinations from Board of Intermediate & Secondary
+111. Computer Science / Commerce/Arts) and have
+112. Examination (Pre-Engineering / Pre-Medical
+113. Education, Nawabshah
+114. passed Pre-Admission Entry Test of this University
+115. R-3(a
+116. Candidates having passed HSC (Pre-Engineering/ Prewith at least 50% marks
+117. Medical/Computer Science/Commerce/Arts) Part I & II
+118. ii
+119. His/her real father/mother is serving in the University
+120. Examinations from Federal Board of Intermediate
+121. and has put in a minimum of three years continuous
+122. Secondary Education, Islamabad
+123. regular service in the University; or has retired from
+124. R-3(b
+125. Candidates having passed HSC (Pre-Engineering
+126. the service of the University after satisfactory
+127. completion of a minimum qualifying service or has
+128. Computer Science) Part I & II Examinations from
+129. Aga Khan Board
+130. 80
+131. www.neduet.edu.pk
+132. NEDUETOfficial
+133. f
+
+========================================================================================================================
+SECTION #4
+PAGE: 88
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. expired after completion of minimum of three years
+02. 7. National Youth Champion
+03. continuous service in this University
+04. Individual/Team
+05. R-7(b
+06. Candidates- Real Sons / Real Daughters of the NED
+07. 8. Member of Sindh Provincial Team
+08. 9. Sindh Champion (Individual/Team
+09. for admission provided that
+10. University employees other than teachers are eligible
+11. iv
+12. The criteria of for selection for admission under this
+13. category shall be
+14. i
+15. The candidate has passed HSC/Equivalent
+16. Examination (Pre-Engineering / Pre-Medical
+17. a
+18. Amongst candidates who qualify, not more than two
+19. Computer Science / Commerce/ Arts) and have
+20. sportsmen / sportswomen shall be selected for any
+21. passed Pre-Admission Entry Test of this University
+22. individual sport/game. The merit list will be prepared
+23. with at least 50% marks
+24. considering the highest order of achievement in sports
+25. ii
+26. His/her real father/mother is serving in the University
+27. b
+28. Based on the order of achievements if there is a tie
+29. and has put in minimum of three years continuous
+30. between two or more candidates, their lower order
+31. regular service in the University; has retired from the
+32. achievements will be considered, and they will be
+33. service of the University after satisfactory completion
+34. subsequently rated in the light of the order of priority
+35. of minimum qualifying service or has expired after
+36. list. In case of further tie a candidate with
+37. completion of minimum of three years continuous
+38. achievement in individual event will get preference
+39. regular service in this University
+40. over a candidate with achievement in team event. If
+41. N.B
+42. The seats between the sub-categories R-7(a) and R-7(b
+43. the preference over the younger candidate
+44. still the tie is not resolved the older candidate will get
+45. are inter-transferable, whenever considered necessary
+46. by the University
+47. C
+48. The information about event, name of team and
+49. R-9
+50. The candidates who are outstanding Sportsmen
+51. candidate shall be supplied on the Application Form
+52. distinction achieved by the team as well as by the
+53. Sportswomen are eligible for admission under this
+54. along with attested copies of other certificates issued
+55. category provided that
+56. by appropriate authorities listed in Para R-9(iv-f). The
+57. achievement certificates must be in printed form
+58. i
+59. They are domiciled in Sindh province and have passed
+60. HSC/Equivalent Examination (Pre-Engineering).' Such
+61. d
+62. The membership certificate of each sport team
+63. candidates must fulfill the criteria given in para 4.2.2
+64. should contain the name of the player, sport, team
+65. represented and the year of representation
+66. ii
+67. They have passed Pre-Admission Entry Test of this
+68. University with at least 50% marks or any other such test
+69. e
+70. The Championship certificate of one sports team
+71. as described in Para 4.2.3
+72. should contain the name of player, sport, team
+73. represented, name of event/category/class in which
+74. N.B
+75. admission under this category
+76. The following are the approved sports and games for
+77. and position
+78. player secured championship, year of championship
+79. Sports: athletics, boxing, swimming, and rowing
+80. N.B
+81. For priority order Nos. 1 & 4, only senior teams will
+82. Games: basketball, cricket, hockey, football
+83. be considered. Any team without mentioning age
+84. volleyball, badminton, tennis, table tennis
+85. group, will be considered as senior team. Normally
+86. and squash
+87. teams with age groups are as under
+88. Senior Team (without age limit
+89. iii) Subject to the conditions that the candidate has
+90. Junior Team (under 20 years age
+91. represented any sports Organizations/ Institutions
+92. Youth Team (under 16 years age
+93. Universities/ Board or Colleges of Sindh Province for the
+94. last three years to be calculated from the last date of
+95. f
+96. For the purpose of selection of the candidates under
+97. selection under sports category shall be as follows
+98. submission of Application Form, the order of priority for
+99. considered, the events of which have taken place
+100. sports category, only those achievements should be
+101. before the last date of submission of Application Form
+102. Priority Order
+103. for admission. Attested copies of all certificates are to
+104. be enclosed with the Application Form. Original
+105. 1. Member of National Team
+106. 2. National Champion (Individual/Team
+107. certificates must be shown at the time of interview
+108. 3. Member of National Junior Team
+109. original certificates will be accepted for consideration
+110. for selection. At the time of interview only those
+111. Boards Team
+112. 4. Member of Pakistan Universities Team/ Pakistan
+113. whose photocopies have already been provided with
+114. 5
+115. National Junior Champion
+116. furnished by the sports authorities mentioned below
+117. the Application Form. The Sports Certificates must be
+118. Individual/Team
+119. 6
+120. inter University/Inter Board
+121. Champion (Individual/Team
+122. For priority order Nos. 1, 2, 3 & 5 Secretary of
+123. concerned Sports Federation
+124. www.neduet.edu.pk
+125. NEDUETOfficial
+126. 81
+
+========================================================================================================================
+SECTION #5
+PAGE: 89
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+02. For priority order No. 4 & 6 Director Sports Higher
+03. R-12(c) Nominees from Azad Kashmir whose names are
+04. Education Commission/ Secretary, Inter Boards
+05. forwarded by Nomination Board, Azad Jammu and
+06. Tournament Committee as the case may be
+07. Kashmir
+08. For priority order No.7 Director General, Pakistan
+09. Sports Board and Coordinator/ Director Sindh
+10. R-12(d) Nominees from Gilgit Baltistan whose names are
+11. Sports Board
+12. Division, Government of Pakistan
+13. forwarded by Kashmir Affairs and Northern Affairs
+14. provincial Śports Association
+15. For priority order No. 8 & 9 Secretary, concerned
+16. R-12(e) Nominees from Federal Capital Area whose names are
+17. For membership of Pakistan Board Team, Secretary
+18. Pakistan, Islamabad
+19. forwarded by Cabinet Division, Government of
+20. of Inter Boards Tournaments Committee
+21. For Inter-University Championship, Secretary of
+22. R-12(f) Nominees who are from Indian Occupied Kashmir
+23. Pakistan University Sports Board
+24. IOK) whose names are forwarded by Ministry of
+25. For Inter-Board Championship, Secretary of InterFinance, Revenue, Economic Affairs Division
+26. Board Tournament Committee
+27. R-13(a) Nominees who are children of Army Personnel and
+28. g
+29. Selection of applicants will be made by Sports
+30. whose names are
+31. Rehabilitation Directorate, GHQ, Rawalpindi
+32. forwardedby
+33. Welfare
+34. Admission Committee constituted by the Viceverified by the nominees of the Committee from the
+35. Chancellor. The merit documents of applicants will be
+36. R-13(b) Nominees who are children of Navy Personnel and
+37. whose names are forwarded by the Director Personal
+38. considers appropriate
+39. authorities and/or sources which Committee
+40. Services, Naval Headquarters
+41. h
+42. Applicants admitted under this category i.e
+43. R-13(c) Nominees who are children of Air Force Personnel and
+44. whose names are forwarded by the Directorate of
+45. Outstanding Sportsmen / Sportswomen will be
+46. required to produce an affidavit to the effect that
+47. Education, Air Headquarters
+48. they will represent the University in their respective
+49. games/sports whenever called upon to do so and that
+50. R-13(d) Nominees who are children of Rangers Personnel and
+51. whose names are forwarded by the Director General
+52. other public/private institute on part time/full time
+53. they would not play as professional or represent any
+54. Pakistan Rangers (Sindh
+55. basis. The required affidavit will be produced on
+56. R-13(e) Nominees who are children of Airport Security Force
+57. stamp paper of Rs.100/- duly signed by the Notary
+58. ASF) and whose names are forwarded by the
+59. Public
+60. Directorate of Education, ASF
+61. Reserved Categories for Nominees
+62. R-14
+63. Nominees who are foreign nationals and whose
+64. Each nominee under the reserved categories of any
+65. Government of Pakistan, Islamabad
+66. names are forwarded by the Economic Affairs Division
+67. nominating agency / body must have passed HSC
+68. University and also eligible as per Clause 4.2
+69. Equivalent Foreign Examination as recognized by this
+70. 5.1(iii
+71. Transfer of Seats
+72. R-10(a) Nominees who belong to Parsi/ Minority Communities
+73. a
+74. If the number of candidates in Arts, Commerce and
+75. and whose names are recommended by Dinshaw Family
+76. categories from R-1 to R-4 falls short of the allocated
+77. Pre-Medical groups selected for admission under
+78. R-10(b) Nominees who are recommended by Latif Ebrahim
+79. number of seats, after admission and waiting lists have
+80. Jamal (LEJ Foundation
+81. been considered, the balance number of seats in each
+82. R-11(a) Nominees of UET Lahore/Taxila under reciprocal basis
+83. of these categories will be transferred to respective
+84. categories reserved for Pre-Engineering group. Any
+85. through Education Department, Govt. of Punjab
+86. further balance seats from categories R-1 to R-4 as well
+87. R-11(b) Nominees of UET Peshawar under reciprocal basis
+88. be transferred to R-1(a
+89. as all balance seats in other categories R-5 to R-14 will
+90. through Education Department, Govt. of Khyber
+91. Pakhtunkhwa
+92. b
+93. Any seat remaining vacant from any category at Thar
+94. R-12(a) Nominees from Balochistan whose names are
+95. will be transferred to the category reserved for
+96. Institute of Engineering, Sciences and Technology (TIEST
+97. Balochistan
+98. forwarded by Education Department, Government of
+99. Mirpurkhas Board. Any further vacant seat will be
+100. R-12(b) Nominees from erstwhile FATA Region whose names
+101. considered necessary by the University administration
+102. inter-transferable with other categories wherever
+103. are forwarded by Home & Tribal Affairs Department
+104. Government of Khyber Pakhtunkhwa, Peshawar
+105. 82
+106. _
+107. www.neduet.edu.pk
+108. NEDUETOfficial
+
+========================================================================================================================
+SECTION #6
+PAGE: 92
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. CARACHI
+02. 5.2(ii
+03. Description of Categories
+04. SF-5
+05. Candidates having passed HSC (Pre-Engineering / PreMedical / Computer Science) Part I & II Examinations
+06. SF-1(a
+07. Candidates having passed HSC (Pre-Engineering
+08. from any Board other than Karachi, Aga Khan, Ziauddin
+09. Hyderabad, Mirpurkhas, Sukkur, Larkana, Nawabshah
+10. Computer Science) Part I & II Examinations and
+11. improvement, from Board of Intermediate
+12. Federal Board and Foreign Examinations
+13. Education, Karachi
+14. N.B
+15. Rs. 890,000/- +3% Tax (Rupees Eight Hundred
+16. SF-1(b
+17. Candidates having passed HSC (Pre-Medical) Part I
+18. Nintey Thousand only) shall be required to be
+19. deposited in designated branch of the banks as Self
+20. Intermediate Education, Karachi
+21. II Examinations and improvement, from Board of
+22. Finance Fee for admission in all disciplines under
+23. above categories (SF-1 to SF-5
+24. SF-2(a
+25. Candidates having passed HSC (Pre-Engineering
+26. Pre-Medical/Computer Science) Part I & II
+27. SF-6(a
+28. Candidates having passed Foreign Examination
+29. Examination and improvement, from Board of
+30. A Level, Cambridge / London / Oxford) equivalent to
+31. Intermediate & Secondary Education, Hyderabad
+32. HSC (Pre-Engineering / Pre-Medical / Computer
+33. Science), from institutions located Overseas
+34. SF-2(b
+35. Candidates having passed HSC (Pre-Engineering
+36. Pre-Medical/Computer Science) Part I & II
+37. SF-6(b
+38. Candidates having passed Foreign Examination (12th
+39. Examination and improvement, from Board of
+40. Grade or Others) equivalent to HSC Pre-Engineering
+41. Intermediate & Secondary Education, Mirpurkhas
+42. Pre-Medical / Computer Science), from institutions
+43. located Overseas
+44. SF-2(c
+45. Candidates having passed HSC (Pre-Engineering
+46. Pre-Medical/Computer Science) Part I & II
+47. SF-6(c
+48. Candidates having passed HSC (Pre-Engineering/ PreExamination and improvement, from Board of
+49. Medical/Computer Science) Part I & II Examination from
+50. Intermediate & Secondary Education, Sukkur
+51. Federal Board of Intermediate & Secondary Education
+52. Islamabad, from institutions located Overseas
+53. SF-2(d
+54. Candidates having passed HSC (Pre-Engineering
+55. Pre-Medical/Computer Science) Part I & II
+56. SF-7(a
+57. Foreign candidates whose names are forwarded by the
+58. Examination and improvement, from Board of
+59. Higher Education Commission Government of Pakistan
+60. Intermediate & Secondary Education, Larkana
+61. Islamabad must have passed HSC (Pre-Engineering
+62. Pre-Medical / Computer Science) Examination or an
+63. SF-2(e
+64. Candidates having passed HSC (Pre-Engineering/ PreEquivalent Foreign Examination
+65. Medical/Computer Science) Part I & II Examination and
+66. improvement, from Board of Intermediate
+67. SF-7(b
+68. Afghan Candidates whose name are forwarded by the
+69. Secondary Education, Nawabshah
+70. Higher Education Commission Government of Pakistan
+71. Islamabad must have passed HSC (Pre-Engineering
+72. SF-3(a
+73. Candidates having passed HSC (Pre-Engineering/ PrePre-Medical / Computer Science) Examination or an
+74. Medical/Computer Science) Part I & II Examination and
+75. Equivalent Foreign Examination
+76. Secondary Education, Islamabad
+77. improvement, from Federal Board of Intermediate
+78. SF-8
+79. Candidates who are Real Sons / Daughters of NED
+80. University Alumni Network (NEDAN) Life Members and
+81. SF-3(b
+82. Candidate having passed HSC (Pre-Engineering/ Prehave passed HSC (Pre-Engineering) Part I & II Examinations
+83. Medical/Computer Science) Part I & II Examinations
+84. from Board of Intermediate Education or equivalent
+85. and improvement from Aga Khan Board Karachi
+86. foreign examination as recognised by the University
+87. SF-3(e
+88. Candidates having passed HSC (Pre-Engineering / PreSF-9(a
+89. Candidates who are Real Sons/ Daughters of
+90. Medical/Computer Science) Part I & II Examinations
+91. Professional Engineers of Sindh Province and have
+92. from Ziauddin University Education Board
+93. passed HSC (Pre-Engineering) Part I & II Examinations
+94. SF-4(a
+95. Candidates having passed Foreign Examination (A Level
+96. foreign examination as recognised by the University
+97. from Board of Intermediate Education or equivalent
+98. Cambridge/ London/Oxford) equivalent to HSC (PreEngineering/ Pre-Medical /Computer Science) part I & II
+99. N.B
+100. The candidate's real parent must have valid
+101. Examinations. from institution located in Pakistan
+102. registration with Pakistan Engineering Council
+103. SF-4(b
+104. Candidates having passed Foreign Examination (12th
+105. SF-9(b
+106. Candidates who are Real Sons/ Daughters of
+107. Grade or Others) equivalent to HSC (Pre-Engineering
+108. Professional Architects/Planners of Sindh Province
+109. Pre-Medical/Computer Science) part I & II Examination
+110. and have passed HSC (Pre-Engineering/Pre-Medical
+111. Located in Pakistan
+112. Computer Science) Part I & II Examinations from
+113. Board of Intermediate Education or equivalent
+114. foreign examination as recognised by the University
+115. www.neduet.edu.pk
+116. NEDUETOfficial
+117. 85
+
+========================================================================================================================
+SECTION #7
+PAGE: 93
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+02. N.B
+03. The candidate's parent must have valid registration
+04. 5.2(iii) Admission Under More Than One Categories
+05. with the Pakistan Council of Architects and Town
+06. Candidates applying against more than one category
+07. Planners (PCATP
+08. under Self Finance Scheme may only deposit Self
+09. SF-9(c
+10. Candidates who are Real Sons/ Daughters of Expatriate
+11. difference in amount of Self Finance, the highest
+12. Finance Fee for any one category. In case of
+13. Pakistanis and have passed HSC (Pre-Engineering
+14. Pre-Medical / Computer Science) Examinations or
+15. amount needs to be deposited
+16. University
+17. equivalent foreign examination as recognised by the
+
+========================================================================================================================
+SECTION #8
+PAGE: 94
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. Exhibition
+03. for a Smarter World
+04. nento
+05. FEROZE 1888
+06. Distribution
+07. THELEGEND
+08. www.neduet.edu.pk
+09. NEDUETOfficial
+10. 87
+
+========================================================================================================================
+SECTION #9
+PAGE: 95
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. NED UNIVERSITY
+03. OF ENGINEERING & TECHNOLOGY
+04. CHAPTER
+05. 6
+06. Mode
+07. of
+08. Admission
+09. 88
+10. www.neduet.edu.pk
+11. NEDUETOfficial
+
+========================================================================================================================
+SECTION #10
+PAGE: 96
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+
+========================================================================================================================
+SECTION #11
+PAGE: 97
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+02. b) Submit a declaration of non-participation in political
+03. 6.5.2
+04. Registration shall however be subject to the
+05. activities and non-indulgence in unwanted activities
+06. conditions laid down in clauses 6.5.3(d) and 6.5.4(c
+07. on Stamp Paper of Rs.100
+08. iii) If the candidate is unable to attend the interview in
+09. 6.5.3(a) In a semester, a student shall be registered in any
+10. such courses prescribed in that Semester which the
+11. case of ‘exceptional circumstances' he/she may
+12. student has not passed earlier, subject to clause
+13. authorise any person, preferably a parent, to come on
+14. 6.5.4(c
+15. the interview day and take decision on behalf of
+16. candidate. The person so authorized shall have to
+17. 6.5.3(b) Registration in any course(s) offered other than the
+18. complete all formalities required by the University
+19. prescribed courses of that Semester/Session may
+20. regarding admission process. Candidates who expect to
+21. also be allowed by the Chairman of the Department
+22. face 'exceptional circumstances' should contact the
+23. concerned in the following cases subject to payment
+24. Chairman Admission Committee before interview
+25. of prescribed fees
+26. iv
+27. A Candidate applying under more than one categoryi) If the student has been admitted in Second Year Fall
+28. once admitted in any category, either withdraw for
+29. all other category(ies) applied OR reappear before
+30. Semester on migration basis and consequently
+31. Admission Committee on prescribed time, if he / she
+32. in which he/she is not eligible for exemption
+33. required to pass (additional) course(s) of First Year
+34. wants to change his / her admission category
+35. v
+36. The name of candidates who do not appear for medical
+37. ii) The student having been allowed change of
+38. discipline is required to pass such course(s) in which
+39. do not submit the original documents and/ or fail to
+40. appear for interview / Admission on the specified
+41. either transfer of credit has not been allowed or the
+42. scheduled dates for each category, shall be deleted
+43. student has not studied the course(s) earlier
+44. from the Merit List. The candidate may, however
+45. appeal, giving justification for non-appearance on the
+46. ii) The student requests being allowed to either register
+47. scheduled date for consideration about inclusion in
+48. in any course(s) in which he/she had failed earlier or
+49. any course(s) as permissible under Para 6.10.1 for
+50. subsequent Merit List to be issued
+51. grade improvement. Sessional marks shall be revised
+
+========================================================================================================================
+SECTION #12
+PAGE: 98
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. 6.5.4(b) In any semester, the student shall ONLY be allowed to
+02. degree requirements in four years (five years for
+03. register in course(s) of which he/she has studied
+04. students in B.Arch
+05. qualified the relevant pre-requisite course(s). In any
+06. case the maximum number of courses shall be in
+07. c) Clause 6.5.4(c) shall also be applied to such
+08. accordance to clause 6.5.3(d
+09. students
+10. 6.5.4(c) Any such students who after being in probation have
+11. obtained less than 2.00 CGPA shall not be allowed to
+12. 6.6
+13. ADMISSION ON MIGRATION BASIS
+14. register in subsequent semester and will remain in
+15. Admission on migration shall be allowed in relevant
+16. Probation. He/She will be required to improve his/her
+17. discipline under extraordinary circumstances subject to the
+18. CGPA up to 2.00 before being allowed to register in
+19. following conditions
+20. subsequent semester
+21. a) Seat(s) is available in relevant discipline
+22. 6.5.5
+23. Any student having discontinued his/her studies after
+24. official permission due to any reason, shall be allowed
+25. b) Applicant must have passed First Year of studies
+26. registration in any subsequent semester (Fall or
+27. admitted
+28. completely in the institution where he/ she was initially
+29. Spring), subject to fulfilment of condition laid down in
+30. clause 6.5.4 (c
+31. c) Admission shall only be offered in Second Year (Fall
+32. 6.5.6(i
+33. Any student registered in any additional course(s) may
+34. Semester
+35. request the chairperson for change or withdrawal from
+36. d) Applications for migration shall be called in the month of
+37. such course(s). However, such change/ withdrawal shall
+38. September on prescribed form which is required to be
+39. be allowed only during first three weeks of the semester
+40. submitted along with processing fee of Rs. 1,500
+41. be adjusted towards subsequent semester
+42. In such case, the fee for the withdrawn courses will ONLY
+43. e) Candidates offered migration shall be required to pay nonrefundable migration fee of Rs. 890,000/- + 3% Tax
+44. 6.5.6(ii
+45. Any student may be allowed to withdraw from a course
+46. Rupees Eight Hundred Ninety Thousand Only
+47. case, the fee of the course shall not be refunded
+48. up to the 8th week of the semester. However, in such
+49. f
+50. Student admitted on migration shall be given
+51. adjusted and the transcript shall record the enrolment
+52. which he/ she has passed during study in previous
+53. exemption in all such courses of First and Second Year
+54. with a grade 'W
+55. institution. However, he / she shall be required to
+56. 6.5.6(iii) No request for withdrawal shall be accepted after 8th
+57. register and pass all such courses of the discipline in
+58. which he/ she is offered admission which he/ she has
+59. in examination, the student shall be awarded 'WU
+60. week of the semester, and in case of non-appearance
+61. not studied in previous institution
+62. against that subject
+63. 6.7
+64. DURATION OF PROGRAMME
+65. 6.5.7
+66. All such students who are interested to avail any
+67. Mobility Programmes need to register themselves in
+
+========================================================================================================================
+SECTION #13
+PAGE: 99
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+02. 6.8
+03. CANCELLATION OF ADMISSION/ENROLMENT
+
+========================================================================================================================
+SECTION #14
+PAGE: 100
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. FOOD ENGINEERING DEPARTMENT
+03. www.neduet.edu.pk
+04. NEDUETOfficial
+05. 93
+
+========================================================================================================================
+SECTION #15
+PAGE: 101
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. NED UNIVERSITY
+03. OF ENGINEERING & TECHNOLOGY
+04. 1
+05. CHAPTER
+06. Examinations
+07. 94
+08. www.neduet.edu.pk
+09. NEDUETOfficial
+
+========================================================================================================================
+SECTION #16
+PAGE: 102
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. 7.1
+02. SEMESTER EXAMINATION
+03. 7.5
+04. GRADE POINT AVERAGES
+05. Semester Examinations are held followed by each
+06. Cumulative Grade Points Average (CGPA) for more
+07. Grade Point Average (GPA) for any semester and
+08. by the Examinations Department
+09. semester. Schedule of such examinations shall be as notified
+10. than one semester shall be calculated as under
+11. 7.2
+12. CLASS ATTENDANCE
+13. CPA/CGPA
+14. credit hours of a course x grade point
+15. Total Credit hours of the courses
+
+========================================================================================================================
+SECTION #17
+PAGE: 103
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. NED UNIVERSITY
+03. OF ENGINEERING & TECHNOLOGY
+04. 1
+05. CHAPTER
+06. 8
+07. Fee Structure
+08. 96
+09. www.neduet.edu.pk
+10. NEDUETOfficial
+
+========================================================================================================================
+SECTION #18
+PAGE: 104
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. 8.1
+02. FEE AND CHARGES (NON-REFUNDABLE
+03. 8.2
+04. CHARGES UNDER SELF-FINANCE SCHEME
+
+========================================================================================================================
+SECTION #19
+PAGE: 105
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+02. i. In case of admitted student applying for cancellation of his
+03. 8.6
+04. FEE REFUND POLICY
+05. her admission and refund of fee before commencement
+06. of classes shall have all self-finance fee refunded
+
+========================================================================================================================
+SECTION #20
+PAGE: 107
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. NED UNIVERSITY
+03. OF ENGINEERING & TECHNOLOGY
+04. CHAPTER
+05. 9
+06. Scholarships
+07. Stipends
+08. And Awards
+09. 100
+10. www.neduet.edu.pk
+11. NEDUETOfficial
+
+========================================================================================================================
+SECTION #21
+PAGE: 108
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. 9.1
+02. ASSISTANCE SCHOLARSHIP
+03. 9.2
+04. SCHOLARSHIPS
+05. a
+06. The Assistance Scholarship is awarded subject to
+07. and deserving students of this University. Previous
+08. Various Scholarships are available for the meritorious
+09. availability of funds to provide monetary assistance to
+10. year, approximately 1766 Scholarships (Higher
+11. Education Commission (HEC) / Private / Government
+12. annum
+13. needy students and is of the value of Rs.5000/-per
+14. students of different disciplines
+15. Funded Scholarships) have been disbursed to the
+16. d) The Vice-Chancellor shall have the discretion to
+17. NB: Absence from or failure in a University Examination
+18. lack of progress and assiduity in studies, breach of
+19. select students for award of Assistance Scholarship
+20. by taking into consideration the financial and other
+21. loss of scholarships granted to any student
+22. discipline or reprehensible conduct shall entail the
+23. circumstances, the academic record and conduct of
+24. the students
+25. 9.3
+
+========================================================================================================================
+SECTION #22
+PAGE: 109
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. NED UNIVERSITY
+03. OF ENGINEERING & TECHNOLOGY
+04. CHAPTER
+05. 10
+06. Supporting
+07. Infrastructure and
+08. Student Facilities
+09. 102
+10. www.neduet.edu.pk
+11. NEDUETOfficial
+
+========================================================================================================================
+SECTION #23
+PAGE: 110
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+
+========================================================================================================================
+SECTION #24
+PAGE: 111
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+
+========================================================================================================================
+SECTION #25
+PAGE: 112
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. multidisciplinary software with a high number of licenses for some
+02. The section also has a very large database of
+
+========================================================================================================================
+SECTION #26
+PAGE: 113
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+02. CENTRES OF NED ACADEMY
+03. a) housing national and global data pertaining to earthquake
+04. b) to act as a centre for disseminating accumulated
+05. knowledge; (c) to respond to the emergency needs; and (d) be
+06. Centre of Continuing Engineering Education (CCEE
+07. able to provide guiding principles for pre and post disaster
+08. earthquake mitigation. It has become a hub of the earthquake
+09. Centre for Continuing Engineering Education, the most
+10. related activities with time. The vital role played by CESNED
+11. after the 2005 Kashmir earthquake led to its recognition as one
+12. active wing of NED Academy enables professionals to attain
+13. higher leves of research, teaching, and industrial cooperation for
+14. of the two earthquake study centres in the Country
+15. with the relevant knowledge, skills, techniques, and technology
+16. technical leaders for constant learning by empowering them
+
+========================================================================================================================
+SECTION #27
+PAGE: 114
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. ARACHI
+02. 10.10
+03. DIRECTORATE OF INDUSTRIAL LIAISON
+04. and well-being of our nation. The ORIC-NEDUET is ranked in 'W
+05. commercialization leading to a positive impact on the welfare
+06. The Directorate of Industrial Liaison (DIL) was
+07. with highest points in 'Research Excellence' among Pakistani
+08. Top Ranking) by Higher Education Commission (HEC) of Pakistan
+09. established at NED University of Engineering & Technology in
+10. 1997 with the primary aim of fostering and strengthening
+11. Universities
+12. such as internships, study visits, final year projects, and job
+13. University-industry connections through various initiatives
+14. 10.11.1 Objectives
+15. required University-industry Linkages in the form of various
+16. placements. objectives of DIL are to create and enhance the
+17. Since its inception, ORIC has adopted its mandate to
+18. activities like internships, study visits, final year projects and
+19. enhance the environment for all research commercialization and
+20. job placements
+21. innovation activities: Following are the core objectives of ORIC
+22. DIL has been actively involved in organizing internship
+23. 1. Developing the university's strategic research and
+24. different organizations and industries as per academic calendar
+25. opportunities for students during vacation periods across
+26. 2. Increasing and diversifying research funding
+27. commercialization directions and policies
+28. 3. Improving integration of research and education
+29. The Cooperative Education Program, which integrates
+30. 4. Strengthening university-industry relationship
+31. classroom education with practical work experience, addresses
+32. 5. Promoting entrepreneurship and business development
+33. the gap between academic curriculum and industrial practices
+34. through its Business Incubation Center (BIC
+35. Through this program, students from their first year undergo
+36. 6. Protecting University's intellectual property and
+37. industrial training alongside their studies, facilitating a smoother
+38. implement approved policies pertaining to research
+39. transition from education to employment. Meritorious students
+40. commercialization and business development
+41. will continue to do internship during their semester breaks until
+42. graduation
+
+========================================================================================================================
+SECTION #28
+PAGE: 115
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+02. Our mission is to promote the transfer of NED University
+03. The purpose of Institutional collaborations is to promote
+04. ready to commercialize technologies for society's use & impact
+05. mutual understanding and scholarly alliance by supporting
+06. and benefit while generating unrestricted income to further
+07. academic and research activities among faculty and students
+08. support research and education. Technology Transfer/IP Office
+09. Specific areas of cooperation between institutions are multireceives invention disclosures from faculty, staff and students
+10. disciplinary Joint research , applying for funding for joint
+11. TTO at ORIC evaluate these disclosures for their commercial
+12. research, Publication jointly authored by the faculty, Exchange of
+13. possibilities, and when possible license them to industry. If the
+14. academic materials and other information; Jointly patenting the
+15. inventions are successfully licensed, cash royalties collected by
+16. product that may produce as a result of joint research
+17. ORIC provide funding to the inventors' departments and schools
+18. Leveraging research and network of subject matter experts
+19. as well as personal shares for the inventors themselves
+20. Access to the state-of-the-art labs of two universities for
+21. Technology is typically transferred through an agreement in
+22. research purpose, Develop opportunities for exchange
+23. which NED grants to a third party a license to use NED's
+24. of trainings, conferences, workshops and academic meetings
+25. intellectual property rights in the defined technology with
+26. Support commercialization activities of partnered institutions
+27. exclusive/non-exclusive rights. The intellectual property office at
+28. within the scope of work
+29. ORIC is established to manage inventions created by faculty, staff
+30. and students. The office provides complete management from
+
+========================================================================================================================
+SECTION #29
+PAGE: 116
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. business, customer segmentation etc. The programme is
+02. and Electrocardiographic tests as well as ambulance facilities are
+03. targeted to facilitate startups in successfully entering the
+04. available. These services are free of charge for students
+05. Successful startups may even reach a stage where they may
+06. market successfully and start generating revenue
+07. Similarly, therapeutic support in the form of Airway
+08. opt to proceed with pre-seed/seed funding
+09. Breathing and Circulatory (ABC) assistance as well as outpatient
+10. facilities are available at both peripheral Medical Sub-Centers
+11. Post-incubation support for startup grants and funds: BICi.e. City and LEJ Campuses
+12. NEDUET has had the privilege to support startups in competing
+13. on national level seed funds and pre-seed funds opportunities
+14. 10.14
+15. STUDENT AFFAIRS DEPARTMENT
+16. like Innovator Seed Fund, National Idea Bank, PM National
+17. Innovation Award, Shell Tameer Awards etc. BIC upon need
+18. also facilitate the management of seed fund grants in
+19. The Department of Student Affairs (DSA) is situated at first
+20. coordination with funding agencies and startup awardees
+21. students throughout their stay at this academia through a wide
+22. floor of Students Facilitation Centre with the aim to facilitate the
+23. NED Entrepreneurship Society (NES): NES at NEDUET
+24. range of activities, services and resources that are provided to
+25. students related with their academic, co-curricular and
+26. operates under BIC and this society is responsible for raising
+27. general awareness on the promises and potentials of
+28. professional pursuits. DSA offers following services to the
+29. entrepreneurship through workshops, seminars, boot
+30. students
+31. NEDUÉT
+32. camps, and competitions targeted to engage the students of
+33. Provides scholarships to the deserving students through Private
+34. Funded Donors, HEC and Ehsaas Scholarship, Government
+35. Campus Companies: Campus Companies is an initiative
+36. Funded Scholarship, etc as mentioned in Chapter 9
+37. under ORIC that enables students to operate and establish
+38. Student societies working under this department which
+39. their businesses in the boundaries of NED University, whilst
+40. organizes numerous activities and events as mentioned in
+41. providing services and products on-campus
+42. chapter 11
+43. 10.12
+44. DIRECTORATE OF UNIVERSITY ADVANCEMENT
+45. Organizes various sports activities as mentioned at 10.15.4
+46. FINANCIAL ASSISTANCE
+47. well as with concession on travelling fare for train and plane
+48. Students are facilitated with bus passes on nominal charges as
+49. Directorate of University Advancement & Financial
+50. Eight Canteens, six Photostat shops and one stationary shop
+51. Assistance was established at NED University of Engineering
+52. are functioning under the supervision of this department to
+53. Technology in May 2013. This Directorate is housed in Old
+54. stationary items on reasonable rates
+55. provide hygienic and quality food, photocopies and general
+56. VC Office (Second Floor). The basic objectives of establishing
+57. this Directorate were to
+58. Girls Common Room facilities (GCR) are maintained and
+59. Achieve financial stability through fund raising
+60. furnished with necessary comfort for female students
+61. Strengthen University Advancement Programme
+62. DSA issues Clearance Certificate to outgoing students, and also
+63. Strengthen the quality of academic programme
+64. the students for PEC Registration and Higher Studies
+65. facilitates the students by attesting academic documents of
+66. Increase and enhance the visibility and awareness of the
+67. University to the community at large and to all stakeholders
+68. In addition to above, the UA & FA seeks to help the
+69. 10.15
+70. OTHER STUDENTS FACILITIES
+71. students, faculty, staff, alumni and friends of the University to
+72. University – today, tomorrow and in fact for lifetime
+73. have pride and satisfaction in having connections to the
+
+========================================================================================================================
+SECTION #30
+PAGE: 117
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+
+========================================================================================================================
+SECTION #31
+PAGE: 118
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. CHAPTER
+03. 11
+04. Students
+05. Activities
+06. www.neduet.edu.pk
+07. NEDUETOfficial
+08. 111
+
+========================================================================================================================
+SECTION #32
+PAGE: 119
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+
+========================================================================================================================
+SECTION #33
+PAGE: 120
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. CHAPTER
+03. 12
+04. Discipline
+05. www.neduet.edu.pk
+06. NEDUETOfficial
+07. 113
+
+========================================================================================================================
+SECTION #34
+PAGE: 121
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. OF ENGINEERING & TECHNOLOGY
+
+========================================================================================================================
+SECTION #35
+PAGE: 122
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. CAR PARKING
+03. SBANNS
+04. 5002
+05. uioon
+06. mdag tt
+07. Director lindustrtel Lia
+08. atag scmaeg
+09. Vides Cosfaronang Fall
+10. TECHNOLOGY
+11. 3
+12. srtoni
+13. CAFETERIA
+14. 20058139
+15. oxriova
+16. Adr, Mat Testng Lab
+17. 915
+18. 115
+19. 4951 031
+20. ENGINEERING AND
+21. 1
+22. CORES
+23. Amane
+24. 17A
+25. Daea cas
+26. afig ig smi
+27. UNIVERSITY
+28. 2
+29. C
+30. a 2
+31. 300g 143 0
+32. utag sasuesian
+33. ind ktig frae Dupt
+34. NED
+35. ALSANN CMANN
+36. mre
+37. Admicistoathe Dinot
+38. Admision Cestte
+39. a
+40. g A
+41. www.neduet.edu.pk
+42. NEDUETOfficial
+43. 115
+
+========================================================================================================================
+SECTION #36
+PAGE: 123
+HEADING: PROSPECTUS 2026
+
+CONTENT:
+
+01. UNDERGRADUATE
+02. NED UNIVERSITY
+03. OF ENGINEERING & TECHNOLOGY
+04. 1
+05. ENGINEERING AND TECHNOLOGY
+06. LEJ CAMPUS
+07. NEE USTY
+08. LEUS US
+09. LOCATION MAP OF NED
+10. CHAIRMAN'S OFFICE
+11. 4
+12. 8
+13. COMPUTER LABS
+
+========================================================================================================================
+TOTAL PROSPECTUS SECTIONS: 36

@@ -26,14 +26,7 @@ class StudentLifeExtractor:
                 "sections",
                 [],
             ):
-
-                heading = (
-                    section.get(
-                        "heading",
-                        "",
-                    )
-                    .strip()
-                )
+                heading = self._derive_heading(section)
 
                 if not self._is_relevant_section(
                     heading,
@@ -52,60 +45,230 @@ class StudentLifeExtractor:
         return self._deduplicate(
             records
         )
+
+    def _looks_like_index_section(
+        self,
+        content: list[str],
+    ) -> bool:
+
+        lines = [
+            line.strip()
+            for line in content
+            if line.strip()
+        ]
+    
+        if len(lines) < 8:
+            return False
+        page_numbers = sum(
+            1
+            for line in lines
+            if re.fullmatch(r"\d{1,3}", line)
+        )
+    
+        numbered_headings = sum(
+            1
+            for line in lines
+            if re.match(
+                r"^\d+(?:\.\d+)+",
+                line,
+            )
+        )
+
+        prose = sum(
+            1
+            for line in lines
+            if len(line.split()) >= 8
+        )
+
+        return (
+            page_numbers >= 3
+            and numbered_headings >= 3
+            and prose <= max(2, len(lines) // 5)
+        )
+
+    def _derive_heading(
+        self,
+        section: dict,
+    ) -> str:
+
+        content = [
+            line.strip()
+            for line in section.get("content", [])
+            if line.strip()
+        ]
+        candidates = []
+        for i, line in enumerate(content[:20]):
+            match = re.match(
+                r"^(\d+(?:\.\d+)+)\s+(.+)$",
+                line,
+            )
+
+            if match:
+                return match.group(2).strip()
+
+            if not self._looks_like_title(line):
+                continue
+            if self._is_non_studentlife_title(line):
+                continue
+            candidates.append(line)
+        if candidates:
+        # Prefer the longest meaningful title
+            for title in candidates:
+                if len(title.split()) >= 2:
+                    return title
+            return candidates[0]
+
+        return section.get("heading", "").strip()
+
+    # def _derive_heading(
+    #     self,
+    #     section: dict,
+    # ) -> str:
+
+    #     content = [
+    #         line.strip()
+    #         for line in section.get("content", [])
+    #         if line.strip()
+    #     ]
+
+    #     best_title = None
+    #     best_score = -1
+
+    #     for line in content[:20]:
+
+    #         match = re.match(
+    #             r"^(\d+(?:\.\d+)+)\s+(.+)$",
+    #             line,
+    #         )
+
+    #         if match:
+    #             candidate = match.group(2).strip()
+    #         else:
+    #             candidate = line
+
+    #         if not self._looks_like_title(candidate):
+    #             continue
+
+    #         if self._is_non_studentlife_title(candidate):
+    #             continue
+
+    #         score = 0
+
+    #         words = candidate.split()
+    #         # Prefer descriptive headings.
+    #         score += min(len(words), 6)
+    #         # Prefer mixed case over ALL CAPS.
+    #         if not candidate.isupper():
+    #             score += 3
+    #         # Prefer headings that aren't extremely short.
+    #         if len(words) >= 2:
+    #             score += 2
+    #         # Penalize OCR fragments.
+    #         if len(words) == 1:
+    #             score -= 2
+    #         if score > best_score:
+    #             best_score = score
+    #             best_title = candidate
+
+    #     if best_title:
+    #         return best_title
+
+    #    return section.get("heading", "").strip()
     
     def _is_relevant_section(
         self,
         heading: str,
         section: dict,
     ) -> bool:
+        """
+        Score whether this section genuinely belongs
+        to Student Life.
+        """
+        score = 0
 
-        heading_text = heading.lower()
+        # lines = [
+        #     line.strip()
+        #     for line in section.get("content", [])
+        #     if line.strip()
+        # ]
 
-        heading_keywords = (
-            "student affairs",
-            "student welfare",
-            "hostel",
-            "hostel charges",
-            "library",
-            "sports",
-            "sport",
-            "transport",
-            "scholarship",
-            "financial assistance",
-            "medical",
-            "common room",
-            "gymnasium",
-            "canteen",
-            "stationery",
-            "accessibility",
-        )
-
-        if any(
-            keyword in heading_text
-            for keyword in heading_keywords
+        if self._looks_like_index_section(
+            section.get("content", [])
         ):
-            return True
+            return False
 
-        text = "\n".join(
-            section.get(
-                "content",
-                [],
-            )[:2]
+        heading_text = heading.lower().strip()
+
+        content = "\n".join(
+            section.get("content", [])[:10]
         ).lower()
 
-        content_keywords = (
-            "hostel",
-            "library",
-            "sports",
-            "transport",
-            "scholarship",
-            "financial assistance",
-        )
+        text = f"{heading_text}\n{content}"
 
-        return any(
-            keyword in text
-            for keyword in content_keywords
-        )
+        positive = {
+            "student affairs": 6,
+            "student welfare": 6,
+            "hostel": 6,
+            "hostel facilities": 7,
+            "hostel charges": 6,
+            "library": 6,
+            "sports": 1,
+            "sport": 1,
+            "gymnasium": 5,
+            "common room": 5,
+            "sports section": 5,
+            "sports facilities": 5,
+            "sports complex": 5,
+            "transport": 5,
+            "canteen": 4,
+            "stationery": 4,
+            "scholarship": 2,
+            "financial assistance": 5,
+            "accessibility": 4,
+            "medical centre": 4,
+            "medical center": 4,
+        }
+
+        negative = {
+            "admission": -8,
+            "eligibility": -8,
+            "admission process": -8,
+            "admission categories": -8,
+            "fee": -6,
+            "curriculum": -8,
+            "department": -5,
+            "faculty": -5,
+            "dean": -5,
+            "chairman": -5,
+            "professor": -5,
+            "medical fitness": -10,
+            "migration": -8,
+            "transfer of seats": -8,
+            "seat distribution": -8,
+            "biomedical": -8,
+            "electrical": -5,
+            "civil engineering": -5,
+            "computer engineering": -5,
+            "chemical engineering": -5,
+        }
+
+        for keyword, value in positive.items():
+            if keyword in text:
+                score += value
+
+        for keyword, value in negative.items():
+            if keyword in text:
+                score += value
+
+        if score >= 5:
+            print(f"[StudentLife] ACCEPT ({score}) {heading}")
+        if score >= 5:
+            print("=" * 80)
+            print(f"Heading: {heading}")
+            print(f"Score: {score}")
+            print(text[:1000])
+
+        return score >= 5
     
 
     def _extract_section(
@@ -128,6 +291,8 @@ class StudentLifeExtractor:
             "content",
             [],
         )
+        if self._looks_like_index_section(content):
+            return []
 
         for index, raw_line in enumerate(
             content
