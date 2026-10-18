@@ -1,98 +1,161 @@
-import inspect
-import json
-from pathlib import Path
 
-from src.processing.prospectus.section_detector import (
-    ProspectusSectionDetector,
-)
 from src.processing.prospectus.fee_record_extractor import (
     FeeRecordExtractor,
 )
+import json
+from pathlib import Path
 
-print(inspect.getfile(FeeRecordExtractor))
+def main() -> None:
+    project_root = Path(__file__).resolve().parents[1]
 
-JSON_PATH = Path("../storage/cleaned/UGProspectus2026.json")
-
-print("Exists:", JSON_PATH.exists())
-print("Resolved:", JSON_PATH.resolve())
-
-with open(JSON_PATH, "r", encoding="utf-8") as f:
-    document = json.load(f)
-
-detector = ProspectusSectionDetector()
-
-sections = detector.detect(document["pages"])
-
-print("\n===== DETECTED SECTIONS =====")
-
-for section in sections:
-    print(
-        section.section_type,
-        section.start_page,
-        section.end_page,
-        section.heading,
+    sections_path = (
+        project_root
+        / "storage"
+        / "sections"
+        / "UGProspectus2025.json"
     )
 
-extractor = FeeRecordExtractor()
+    layout_path = (
+        project_root
+        / "storage"
+        / "experiments"
+        / "layout_reconstruction.json"
+    )
 
-fee_pages = []
+    with open(
+        sections_path,
+        "r",
+        encoding="utf-8",
+    ) as f:
+        sections_document = json.load(f)
 
-for section in sections:
+    with open(
+        layout_path,
+        "r",
+        encoding="utf-8",
+    ) as f:
+        layout_document = json.load(f)
 
-    if section.section_type == "fee_structure":
+    sections = sections_document.get(
+        "sections",
+        [],
+    )
 
-        pages = [
-            page
-            for page in document["pages"]
-            if (
-                section.start_page
-                <= page["page_number"]
-                <= section.end_page
-            )
-        ]
+    finance_sections = [
+        section
+        for section in sections
+        if section.get("section_type") == "finance"
+    ]
 
-        fee_pages.extend(pages)
-
+    if not finance_sections:
         print(
-            f"[TEST] fee_structure: "
-            f"{section.start_page}-{section.end_page} "
-            f"({len(pages)} pages)"
+            "NO FINANCE SECTION FOUND"
+        )
+        return
+
+    finance_page_numbers = set()
+
+    for section in finance_sections:
+        start_page = section.get(
+            "start_page"
+        )
+        end_page = section.get(
+            "end_page"
         )
 
-seen = set()
+        print(
+            f"FINANCE SECTION: "
+            f"{start_page}-{end_page}"
+        )
 
-fee_pages = [
-    page
-    for page in fee_pages
-    if not (
-        page["page_number"] in seen
-        or seen.add(page["page_number"])
+        if (
+            start_page is None
+            or end_page is None
+        ):
+            continue
+
+        finance_page_numbers.update(
+            range(
+                start_page,
+                end_page + 1,
+            )
+        )
+
+    layout_pages = (
+        layout_document.get("pages", [])
+        if isinstance(
+            layout_document,
+            dict,
+        )
+        else layout_document
     )
-]
 
-print(f"\nFee pages passed: {len(fee_pages)}")
+    fee_pages = [
+        page
+        for page in layout_pages
+        if page.get("page_number")
+        in finance_page_numbers
+    ]
 
-records = extractor.extract(fee_pages)
+    print(
+        f"FINANCE PAGE NUMBERS: "
+        f"{sorted(finance_page_numbers)}"
+    )
 
-print("\n========================================")
-print("TOTAL FEE RECORDS:", len(records))
-print("========================================")
+    print(
+        f"LAYOUT FEE PAGES: "
+        f"{len(fee_pages)}"
+    )
 
-for record in records:
+    extractor = FeeRecordExtractor()
 
-    print("=" * 80)
-    print("CATEGORY :", record.category)
-    print("AMOUNT   :", record.amount)
-    print("CURRENCY :", record.currency)
-   # print("COLUMN   :", record.column)
-    print("SCHEME   :", record.scheme)
-    print("PERIOD   :", record.payment_period)
-    print("NOTES    :", record.notes)
-    print("PAGE     :", record.source_page)
-    print("HEADING  :", record.source_heading)
-    print("SOURCE   :", record.source_text)
+    records = extractor.extract(
+        layout_document=layout_document,
+        pages=fee_pages,
+    )
 
-print("\n===== FIRST 20 RECORDS =====")
+    output_path = (
+        Path(__file__).resolve().parent
+        / "fee_extractor_test_output.txt"
+    )
 
-for record in records[:20]:
-    print(record)
+    with open(
+        output_path,
+        "w",
+        encoding="utf-8",
+    ) as f:
+        f.write(
+            f"TOTAL RECORDS: "
+            f"{len(records)}\n\n"
+        )
+
+        for index, record in enumerate(
+            records,
+            start=1,
+        ):
+            f.write(
+                f"========== RECORD "
+                f"{index} ==========\n"
+            )
+
+            for key, value in (
+                record.to_dict().items()
+            ):
+                f.write(
+                    f"{key}: {value}\n"
+                )
+
+            f.write("\n")
+
+    print(
+        f"TOTAL RECORDS: "
+        f"{len(records)}"
+    )
+
+    print(
+        f"OUTPUT: {output_path}"
+    )
+
+
+if __name__ == "__main__":
+    main()

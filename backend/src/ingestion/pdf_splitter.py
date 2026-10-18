@@ -9,18 +9,32 @@ class PDFSplitter:
     and stores them in storage/pages.
     """
 
-    def split(self, pdf_path: Path) -> list[Path]:
+    # def split(self, pdf_path: Path) -> list[Path]:
+    def split(
+        self,
+        pdf_path: Path,
+        pages_dir: Path | None = None,
+    ) -> list[Path]:
 
         document = fitz.open(pdf_path)
 
-        project_root = Path(__file__).resolve().parents[3]
+        # project_root = Path(__file__).resolve().parents[3]
 
-        pages_dir = (
-            project_root
-            / "storage"
-            / "pages"
-            / pdf_path.stem
-        )
+        # pages_dir = (
+        #     project_root
+        #     / "storage"
+        #     / "pages"
+        #     / pdf_path.stem
+        # )
+        if pages_dir is None:
+            project_root = Path(__file__).resolve().parents[3]
+
+            pages_dir = (
+                project_root
+                / "storage"
+                / "pages"
+                / pdf_path.stem
+            )
 
         pages_dir.mkdir(
             parents=True,

@@ -3,12 +3,89 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-
+from src.database.database import SessionLocal, engine
+from sqlalchemy import text
 from src.api.chat import router as chat_router
 from src.api.admin import router as admin_router
+from contextlib import asynccontextmanager
+
+from src.api.chat import get_answer_service
+from src.services.document_manager import DocumentManager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+
+    print("[WARMUP] Warming database connection pool...")
+
+    try:
+        connections = []
+
+        for _ in range(5):
+            connection = engine.connect()
+            connection.execute(text("SELECT 1"))
+            connections.append(connection)
+
+        for connection in connections:
+            connection.close()
+
+        print("[WARMUP] Database connection pool ready.")
+
+    except Exception as exc:
+        print(
+            f"[WARMUP] Database connection pool warmup failed: "
+            f"{exc}"
+        )
+
+    document_manager = DocumentManager()
+
+    try:
+        active_document = (
+            document_manager.get_active_document()
+        )
+
+        if active_document:
+            document_id = active_document.get(
+                "document_id"
+            )
+
+            collection_name = active_document.get(
+                "collection_name"
+            )
+
+            if document_id and collection_name:
+
+                print(
+                    "[WARMUP] Building BM25 cache..."
+                )
+
+                answer_service = (
+                    get_answer_service(
+                        document_id,
+                        collection_name,
+                    )
+                )
+
+                answer_service.retriever._build_bm25_index()
+
+                print(
+                    "[WARMUP] BM25 cache ready."
+                )
+
+    except Exception as exc:
+
+        print(
+            f"[WARMUP] Failed: {exc}"
+        )
+
+    yield
 
 
-app = FastAPI(title="ProspectusAI")
+app = FastAPI(
+    title="ProspectusAI",
+    lifespan=lifespan,
+)
+
+# app = FastAPI(title="ProspectusAI")
 
 app.add_middleware(
     CORSMiddleware,

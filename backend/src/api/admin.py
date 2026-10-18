@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-
+import tempfile
 from fastapi import (
     APIRouter,
     Depends,
@@ -273,10 +273,24 @@ def upload_document(
             ),
         )
 
-    uploads_dir = (
-        document_manager.storage_dir
-        / "uploads"
+    # uploads_dir = (
+    #     document_manager.storage_dir
+    #     / "uploads"
+    # )
+
+    # uploads_dir.mkdir(
+    #     parents=True,
+    #     exist_ok=True,
+    # )
+
+    # pdf_path = uploads_dir / filename
+    runtime_dir = Path(
+        tempfile.mkdtemp(
+            prefix="prospectusai_"
+        )
     )
+
+    uploads_dir = runtime_dir / "uploads"
 
     uploads_dir.mkdir(
         parents=True,
@@ -305,7 +319,14 @@ def upload_document(
             DocumentProcessingService,
         )
 
-        processor = DocumentProcessingService()
+        # processor = DocumentProcessingService()
+        runtime_document_manager = DocumentManager(
+            runtime_dir=runtime_dir
+        )
+
+        processor = DocumentProcessingService(
+            document_manager=runtime_document_manager
+        )
 
         result = processor.process(
             document_id=entry["document_id"],
@@ -321,8 +342,16 @@ def upload_document(
             detail=str(error),
         ) from error
 
+    # finally:
+    #     file.file.close()
     finally:
         file.file.close()
+
+        if runtime_dir.exists():
+            shutil.rmtree(
+                runtime_dir,
+                ignore_errors=True,
+            )
 
     return {
         "message": (

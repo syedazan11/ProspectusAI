@@ -23,18 +23,38 @@ class DocumentManager:
     - remove all generated data for older documents
     """
 
-    def __init__(self) -> None:
+    # def __init__(self) -> None:
+
+    #     self.project_root = (
+    #         Path(__file__).resolve().parents[3]
+    #     )
+
+    #     self.storage_dir = (
+    #         self.project_root / "storage"
+    #     )
+
+    #     self.registry_path = (
+    #         self.storage_dir / "registry.json"
+    #     )
+    def __init__(
+        self,
+        runtime_dir: Path | None = None,
+    ) -> None:
 
         self.project_root = (
             Path(__file__).resolve().parents[3]
         )
 
         self.storage_dir = (
-            self.project_root / "storage"
+            runtime_dir
+            if runtime_dir is not None
+            else self.project_root / "storage"
         )
 
         self.registry_path = (
-            self.storage_dir / "registry.json"
+            self.project_root
+            / "storage"
+            / "registry.json"
         )
 
     def load_registry(self) -> dict[str, Any]:

@@ -1,43 +1,65 @@
 ﻿from functools import lru_cache
 import json
-
-
+import time
+import traceback
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import StreamingResponse
-
+from src.conversation import session
+# from src.database.database import SessionLocal
 from src.generation.answer_service import RescueAnswerService
-from src.services.chat_history_service import ChatHistoryService
+# from src.services.chat_history_service import ChatHistoryService
 from src.services.document_manager import DocumentManager
+from src.conversation.conversation_manager import (
+    ConversationManager,
+)
+
+from src.conversation.models import (
+    ConversationResponse,
+    ConversationState,
+)
+from src.conversation.session_manager import (
+    SessionManager,
+)
+from src.conversation.store import ConversationStore
 
 
 router = APIRouter()
 
 document_manager = DocumentManager()
-chat_service = ChatHistoryService()
+# chat_service = ChatHistoryService()
+session_manager = SessionManager()
+conversation_store = ConversationStore()
+
+# def get_chat_owner_id(
+#     x_chat_owner_id: str | None,
+# ) -> str:
+
+#     owner_id = (
+#         x_chat_owner_id or ""
+#     ).strip()
+
+#     if not owner_id:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="X-Chat-Owner-ID is required.",
+#         )
+
+#     if len(owner_id) > 100:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Invalid chat owner ID.",
+#         )
+
+#     return owner_id
 
 
-def get_chat_owner_id(
-    x_chat_owner_id: str | None,
-) -> str:
+@lru_cache(maxsize=2)
+def get_conversation_manager(
+    document_id: str,
+    collection_name: str,
+) -> ConversationManager:
 
-    owner_id = (
-        x_chat_owner_id or ""
-    ).strip()
-
-    if not owner_id:
-        raise HTTPException(
-            status_code=400,
-            detail="X-Chat-Owner-ID is required.",
-        )
-
-    if len(owner_id) > 100:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid chat owner ID.",
-        )
-
-    return owner_id
-
+    return ConversationManager()
 
 @lru_cache(maxsize=2)
 def get_answer_service(
@@ -50,7 +72,7 @@ def get_answer_service(
     )
 
 
-def load_answer_service() -> RescueAnswerService:
+def load_conversation_manager() -> ConversationManager:
 
     active_document = (
         document_manager.get_active_document()
@@ -69,89 +91,126 @@ def load_answer_service() -> RescueAnswerService:
             ),
         )
 
-    return get_answer_service(
+    return get_conversation_manager(
         active_document["document_id"],
         collection_name,
     )
 
 
-@router.get("/chats")
-def list_chats(
-    x_chat_owner_id: str | None = Header(
-        default=None
-    ),
-):
+# @router.get("/chats")
+# def list_chats(
+#     x_chat_owner_id: str | None = Header(
+#         default=None
+#     ),
+# ):
 
-    owner_id = get_chat_owner_id(
-        x_chat_owner_id
-    )
+#     owner_id = get_chat_owner_id(
+#         x_chat_owner_id
+#     )
 
-    return {
-        "chats": chat_service.list_chats(
-            browser_id=owner_id,
-        )
-    }
-
-
-@router.post("/chats")
-def create_chat(
-    x_chat_owner_id: str | None = Header(
-        default=None
-    ),
-):
-
-    owner_id = get_chat_owner_id(
-        x_chat_owner_id
-    )
-
-    return chat_service.create_chat(
-        browser_id=owner_id,
-    )
+#     return {
+#         "chats": chat_service.list_chats(
+#             browser_id=owner_id,
+#         )
+#     }
 
 
+# @router.post("/chats")
+# def create_chat(
+#     x_chat_owner_id: str | None = Header(
+#         default=None
+#     ),
+# ):
+
+#     owner_id = get_chat_owner_id(
+#         x_chat_owner_id
+#     )
+
+#     chat = chat_service.create_chat(
+#         browser_id=owner_id,
+#     )
+
+#     session_manager.get_session(
+#          chat["id"],
+#     )
+
+#     return chat
+
+###whooo
 @router.get("/chats/{chat_id}/messages")
+# def get_messages(
+#     chat_id: str,
+#     x_chat_owner_id: str | None = Header(
+#         default=None
+#     ),
+# ):
+#     owner_id = get_chat_owner_id(
+#         x_chat_owner_id
+#     )
+
+#     chat, messages = (
+#         chat_service.get_chat_with_messages(
+#             browser_id=owner_id,
+#             chat_id=chat_id,
+#         )
+#     )
+
+#     if chat is None:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Chat not found.",
+#         )
+
+#     return {
+#         "messages": messages,
+#     }
 def get_messages(
     chat_id: str,
-    x_chat_owner_id: str | None = Header(
-        default=None
-    ),
+    # x_chat_owner_id: str | None = Header(
+    #     default=None
+    # ),
 ):
-
-    owner_id = get_chat_owner_id(
-        x_chat_owner_id
+    messages = conversation_store.get_messages(
+        chat_id,
     )
 
-    chat = chat_service.get_chat(
-        browser_id=owner_id,
-        chat_id=chat_id,
-    )
-
-    if chat is None:
+    if not messages:
         raise HTTPException(
             status_code=404,
             detail="Chat not found.",
         )
 
     return {
-        "messages": chat_service.get_messages(
-            browser_id=owner_id,
-            chat_id=chat_id,
-        )
+        "messages": messages,
     }
+
 
 
 @router.post("/chats/{chat_id}/messages/stream")
 def send_message_stream(
     chat_id: str,
     payload: dict,
-    x_chat_owner_id: str | None = Header(
-        default=None
-    ),
+    # x_chat_owner_id: str | None = Header(
+    #     default=None
+    # ),
 ):
+    endpoint_start = time.perf_counter()
 
-    owner_id = get_chat_owner_id(
-        x_chat_owner_id
-    )
+    print("\n" + "=" * 80)
+    print("[ENDPOINT TIMING] send_message_stream START")
+    print("=" * 80)
+
+    owner_start = time.perf_counter()
+
+
+    # owner_id = get_chat_owner_id(
+    #     x_chat_owner_id
+    # )
+
+    # print(
+    #     f"[ENDPOINT TIMING] get_chat_owner_id: "
+    #     f"{time.perf_counter() - owner_start:.3f}s"
+    # )
 
     question = str(
         payload.get("question", "")
@@ -163,103 +222,915 @@ def send_message_stream(
             detail="Question cannot be empty.",
         )
 
-    chat = chat_service.get_chat(
-        browser_id=owner_id,
-        chat_id=chat_id,
+    # chat_start = time.perf_counter()
+
+    # db_session = SessionLocal()
+
+    # # chat, conversation_history = chat_service.get_chat_with_messages(
+    # #     browser_id=owner_id,
+    # #     chat_id=chat_id,
+    # #     limit=6,
+    # #     session=db_session,
+    # # )
+    # chat_orm = (
+    #     chat_service.get_chat_orm(
+    #         browser_id=owner_id,
+    #         chat_id=chat_id,
+    #         title=question,
+    #         session=db_session,
+    #     )
+    # )
+
+    # print(
+    #     f"[ENDPOINT TIMING] get_chat_with_messages: "
+    #     f"{time.perf_counter() - chat_start:.3f}s"
+    # )
+
+    # # if chat is None:
+    # if chat_orm is None:
+    #     raise HTTPException(
+    #         status_code=404,
+    #         detail="Chat not found.",
+    #     )
+
+    # # chat_service.add_message_for_chat(
+    # #     chat=chat_orm,
+    # #     role="user",
+    # #     content=question,
+    # #     session=db_session,
+    # # )
+
+    # # session_start = time.perf_counter()
+
+    # db_session.close()
+
+
+    # session = session_manager.get_session(
+    #     chat_id,
+    # )
+
+
+
+    # # print(
+    # #     f"[ENDPOINT TIMING] get_session: "
+    # #     f"{time.perf_counter() - session_start:.3f}s"
+    # # )
+
+    # # history_start = time.perf_counter()
+
+    # # conversation_history = (
+    # #     chat_service.get_messages(
+    # #         browser_id=owner_id,
+    # #         chat_id=chat_id,
+    # #     )
+    # # )[-6:]
+
+    # # chat, conversation_history = (
+    # #     chat_service.get_chat_with_messages(
+    # #         browser_id=owner_id,
+    # #         chat_id=chat_id,
+    # #         limit=6,
+    # #     )
+    # # )
+
+    
+
+    # # add_user_start = time.perf_counter()
+
+    # # chat_service.add_message(
+    # #     browser_id=owner_id,
+    # #     chat_id=chat_id,
+    # #     role="user",
+    # #     content=question,
+    # #     session=db_session,
+    # # )
+    # # chat_service.add_message_for_chat(
+    # #     chat=chat_orm,
+    # #     role="user",
+    # #     content=question,
+    # #     session=db_session,
+    # # )
+
+    # # print(
+    # #     f"[ENDPOINT TIMING] add_user_message: "
+    # #     f"{time.perf_counter() - add_user_start:.3f}s"
+    # # )
+
+    # session.add_turn(
+    #     "user",
+    #     question,
+    # )
+
+    # # if chat["title"] == "New Chat":
+    # # if chat_orm.title == "New Chat":
+    # #     title_start = time.perf_counter()
+    # #     chat_service.update_title(
+    # #         browser_id=owner_id,
+    # #         chat_id=chat_id,
+    # #         title=question,
+    # #         # session=db_session,
+    # #     )
+    # #     # db_session.commit()
+
+    # #     print(
+    # #     f"[ENDPOINT TIMING] update_title: "
+    # #     f"{time.perf_counter() - title_start:.3f}s"
+    # #     )   
+    
+    # # answer_service_start = time.perf_counter()
+
+    # # answer_service = RescueAnswerService(
+    # #     collection_name=(
+    # #         document_manager
+    # #         .get_active_document()["collection_name"]
+    # #     ),
+    # # )
+
+    # # print(
+    # #     f"[TIMING] RescueAnswerService init: "
+    # #     f"{time.perf_counter() - answer_service_start:.3f}s"
+    # # )
+
+    # document_start = time.perf_counter()
+
+    # active_document = (
+    #    document_manager.get_active_document()
+    # )
+
+    # print(
+    #     f"[ENDPOINT TIMING] get_active_document: "
+    #     f"{time.perf_counter() - document_start:.3f}s"
+    # )
+
+    # service_start = time.perf_counter()
+
+    # answer_service = get_answer_service(
+    #     active_document["document_id"],
+    #     active_document["collection_name"],
+    # )
+
+    # print(
+    #     f"[ENDPOINT TIMING] get_answer_service: "
+    #     f"{time.perf_counter() - service_start:.3f}s"
+    # )
+
+
+    # state = ConversationState(
+
+    #     session_id=chat_id,
+    # )
+
+    # conversation_manager = (
+    #     load_conversation_manager()
+    # )
+
+    session_start = time.perf_counter()
+
+    session = session_manager.get_session(
+        chat_id,
     )
 
-    if chat is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Chat not found.",
-        )
-
-    conversation_history = (
-        chat_service.get_messages(
-            browser_id=owner_id,
-            chat_id=chat_id,
-        )
-    )[-6:]
-
-    chat_service.add_message(
-        browser_id=owner_id,
-        chat_id=chat_id,
-        role="user",
-        content=question,
+    print(
+        f"[ENDPOINT TIMING] get_session: "
+        f"{time.perf_counter() - session_start:.3f}s"
     )
 
-    if chat["title"] == "New Chat":
-        chat_service.update_title(
-            browser_id=owner_id,
-            chat_id=chat_id,
-            title=question,
+
+    turn_start = time.perf_counter()
+
+    session.add_turn(
+        "user",
+        question,
+    )
+
+    conversation_store.add_message(
+        chat_id,
+        {
+            "id": f"user-{int(time.time() * 1000)}",
+            "role": "user",
+            "content": question,
+            "sources": [],
+            "page_references": [],
+            "created_at": time.time(),
+        },
+    )
+
+    print(
+        f"[ENDPOINT TIMING] session.add_turn: "
+        f"{time.perf_counter() - turn_start:.3f}s"
+    )
+
+
+    document_start = time.perf_counter()
+
+    active_document = (
+        document_manager.get_active_document()
+    )
+
+    print(
+        f"[ENDPOINT TIMING] get_active_document: "
+        f"{time.perf_counter() - document_start:.3f}s"
+    )
+
+
+    service_start = time.perf_counter()
+
+    answer_service = get_answer_service(
+        active_document["document_id"],
+        active_document["collection_name"],
+    )
+
+    people_records = [
+        chunk
+        for chunk in answer_service.retriever._all_chunks()
+        if chunk.get("structured")
+        and chunk.get("record_type") == "people"
+    ]
+
+    print(
+        f"[ENDPOINT TIMING] get_answer_service: "
+        f"{time.perf_counter() - service_start:.3f}s"
+    )
+
+
+    state_start = time.perf_counter()
+
+    state = ConversationState(
+        session_id=chat_id,
+    )
+
+    print(
+        f"[ENDPOINT TIMING] ConversationState: "
+        f"{time.perf_counter() - state_start:.3f}s"
+    )
+
+
+    manager_start = time.perf_counter()
+
+    conversation_manager = (
+        load_conversation_manager()
+    )
+    
+    conversation_manager.set_people_records(
+        people_records
+    )
+
+    print(
+        f"[ENDPOINT TIMING] load_conversation_manager: "
+        f"{time.perf_counter() - manager_start:.3f}s"
+    )
+
+    process_start = time.perf_counter()
+
+    # result = conversation_manager.process(
+    #     query=question,
+    #     state=state,
+    #     session=session,
+    # )
+    from fastapi import HTTPException
+
+    try:
+        result = conversation_manager.process(
+            query=question,
+            state=state,
+            session=session,
+        )
+    except RuntimeError as exc:
+        if "rate limit" in str(exc).lower() or "quota" in str(exc).lower():
+            raise HTTPException(
+                status_code=429,
+                detail=str(exc),
+            ) from exc
+        raise
+
+    print(
+        f"[ENDPOINT TIMING] conversation_manager.process: "
+        f"{time.perf_counter() - process_start:.3f}s"
+    )
+
+    print(
+        f"[ENDPOINT TIMING] BEFORE StreamingResponse: "
+        f"{time.perf_counter() - endpoint_start:.3f}s"
+    )
+
+    if isinstance(
+        result,
+        ConversationResponse,
+    ):
+
+        # def conversation_stream():
+
+        #     # assistant_message = (
+        #     #     chat_service.add_message(
+        #     #         browser_id=owner_id,
+        #     #         chat_id=chat_id,
+        #     #         role="assistant",
+        #     #         content=result.answer,
+        #     #     )
+        #     # )
+        #     assistant_message = (
+        #          chat_service.add_message_for_chat(
+        #             chat=chat_orm,
+        #             role="assistant",
+        #             content=result.answer,
+        #             # session=db_session,
+        #         )
+        #     )
+
+            
+        #     # db_session.close()
+
+        #     yield json.dumps(
+        #         {
+        #             "type": "done",
+        #             "answer": result.answer,
+        #             "status": "handled",
+        #             "sources": [],
+        #             "page_references": [],
+        #             "message": assistant_message,
+        #         },
+        #         ensure_ascii=False,
+        #     ) + "\n"
+        # def conversation_stream():
+
+        #     user_message_start = time.perf_counter()
+
+        #     try:
+        #         with SessionLocal() as user_db_session:
+
+        #             user_chat = chat_service.get_chat_orm(
+        #                 browser_id=owner_id,
+        #                 chat_id=chat_id,
+        #                 title=question,
+        #                 session=user_db_session,
+        #             )
+
+        #             if user_chat is not None:
+        #                 chat_service.add_message_for_chat(
+        #                     chat=user_chat,
+        #                     role="user",
+        #                     content=question,
+        #                     session=user_db_session,
+        #                 )
+
+        #         print(
+        #             f"[CHAT DB TIMING] conversation user message + title: "
+        #             f"{time.perf_counter() - user_message_start:.3f}s"
+        #         )
+
+        #     except Exception:
+        #         traceback.print_exc()
+        #         raise
+
+        #     assistant_db_session = SessionLocal()
+
+        #     try:
+        #         assistant_chat = chat_service.get_chat_orm(
+        #             browser_id=owner_id,
+        #             chat_id=chat_id,
+        #             session=assistant_db_session,
+        #         )
+
+        #         if assistant_chat is None:
+        #             raise RuntimeError(
+        #                 "Chat disappeared before assistant message persistence."
+        #             )
+
+        #         assistant_message = (
+        #             chat_service.add_message_for_chat(
+        #                 chat=assistant_chat,
+        #                 role="assistant",
+        #                 content=result.answer,
+        #                 session=assistant_db_session,
+        #                 commit=False,
+        #             )
+        #         )
+
+        #         yield json.dumps(
+        #             {
+        #                 "type": "done",
+        #                 "answer": result.answer,
+        #                 "status": "handled",
+        #                 "sources": [],
+        #                 "page_references": [],
+        #                 "message": assistant_message,
+        #             },
+        #             ensure_ascii=False,
+        #         ) + "\n"
+
+        #         commit_start = time.perf_counter()
+
+        #         assistant_db_session.commit()
+
+        #         print(
+        #             f"[CHAT DB TIMING] conversation assistant post-stream commit: "
+        #             f"{time.perf_counter() - commit_start:.3f}s"
+        #         )
+
+        #     finally:
+        #         assistant_db_session.close()
+
+        conversation_store.add_message(
+            chat_id,
+            {
+                "id": f"assistant-{int(time.time() * 1000)}",
+                "role": "assistant",
+                "content": result.answer,
+                "sources": [],
+                "page_references": [],
+                "created_at": time.time(),
+            },
+        )
+        def conversation_stream():
+            yield json.dumps(
+                {
+                    "type": "done",
+                    "answer": result.answer,
+                    "status": "handled",
+                    "sources": [],
+                    "page_references": [],
+                    "message": {
+                        "id": f"assistant-{int(time.time() * 1000)}",
+                        "role": "assistant",
+                        "content": result.answer,
+                        "sources": [],
+                        "page_references": [],
+                        "created_at": time.time(),
+                    },
+                },
+                ensure_ascii=False,
+            ) + "\n"
+
+        return StreamingResponse(
+            conversation_stream(),
+            media_type="application/x-ndjson",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
         )
 
-    answer_service = load_answer_service()
+    # if isinstance(
+    #     result,
+    #     ConversationResponse,
+    # ):
+
+    #     assistant_message = (
+    #         chat_service.add_message(
+    #             browser_id=owner_id,
+    #             chat_id=chat_id,
+    #             role="assistant",
+    #             content=result.answer,
+    #             session=db_session,
+    #         )
+    #     )
+
+    #     def conversation_stream():
+
+    #         yield json.dumps(
+    #             {
+    #                 "type": "done",
+    #                 "answer": result.answer,
+    #                 "status": "handled",
+    #                 "sources": [],
+    #                 "page_references": [],
+    #                 "message": assistant_message,
+    #             },
+    #             ensure_ascii=False,
+    #         ) + "\n"
+
+    #     return StreamingResponse(
+    #         conversation_stream(),
+    #         media_type="application/x-ndjson",
+    #         headers={
+    #             "Cache-Control": "no-cache",
+    #             "X-Accel-Buffering": "no",
+    #         },
+    #     )
+
+    # `result` here is the already-interpreted ConversationRequest
+    # returned by ProspectusHandler's passthrough - it carries the
+    # follow-up-resolved rewritten_query and the staged
+    # pending_context computed by QueryInterpreter. Reuse it as-is
+    # instead of rebuilding a bare request, or all of that follow-up
+    # resolution ("Co-chairperson?" -> the actual standalone question)
+    # would be silently thrown away before reaching AnswerService.
+    request = result
 
     def event_stream():
 
+        stream_start = time.perf_counter()
+        first_event_time = None
+        user_message_persisted = False
+#heheh
         try:
+            # Persist the user message before consuming the answer stream.
+            # user_message_start = time.perf_counter()
+
+            # # with SessionLocal() as user_db_session:
+
+            # #     user_chat = chat_service.get_chat_orm(
+            # #         browser_id=owner_id,
+            # #         chat_id=chat_id,
+            # #         session=user_db_session,
+            # #     )
+
+            # #     # if user_chat is not None:
+
+            # #     #     chat_service.add_message_for_chat(
+            # #     #         chat=user_chat,
+            # #     #         role="user",
+            # #     #         content=question,
+            # #     #         session=user_db_session,
+            # #     #     )
+
+            # #     #     if user_chat.title == "New Chat":
+
+            # #     #         chat_service.update_title(
+            # #     #             browser_id=owner_id,
+            # #     #             chat_id=chat_id,
+            # #     #             title=question,
+            # #     #         )
+            # #     # if user_chat is not None:
+
+            # #     #     if user_chat.title == "New Chat":
+            # #     #         clean_title = question.strip()
+
+            # #     #         if len(clean_title) > 50:
+            # #     #             clean_title = clean_title[:50] + "..."
+
+            # #     #         user_chat.title = clean_title or "New Chat"
+
+            # #     #     chat_service.add_message_for_chat(
+            # #     #         chat=user_chat,
+            # #     #         role="user",
+            # #     #         content=question,
+            # #     #         session=user_db_session,
+            # #     #     )
+
+            # #     if user_chat is None:
+            # #         raise HTTPException(
+            # #             status_code=404,
+            # #             detail="Chat not found.",
+            # #         )
+
+            # #     # if user_chat.title == "New Chat":
+            # #     #     clean_title = question.strip()
+
+            # #     #     if len(clean_title) > 50:
+            # #     #         clean_title = clean_title[:50] + "..."
+
+            # #     #     user_chat.title = clean_title or "New Chat"
+
+            # #     # chat_service.add_message_for_chat(
+            # #     #     chat=user_chat,
+            # #     #     role="user",
+            # #     #     content=question,
+            # #     #     session=user_db_session,
+            # #     # )
+            # #     if user_chat.title == "New Chat":
+            # #         clean_title = question.strip()
+
+            # #         if len(clean_title) > 50:
+            # #             clean_title = clean_title[:50] + "..."
+
+            # #         user_chat.title = clean_title or "New Chat"
+
+            # #     add_start = time.perf_counter()
+
+            # #     chat_service.add_message_for_chat(
+            # #         chat=user_chat,
+            # #         role="user",
+            # #         content=question,
+            # #         session=user_db_session,
+            # #     )
+
+            # with SessionLocal() as user_db_session:
+
+            #     db_connection_start = time.perf_counter()
+
+            #     user_db_session.connection()
+
+            #     print(
+            #         f"[CHAT DB TIMING] user session connection: "
+            #         f"{time.perf_counter() - db_connection_start:.3f}s"
+            #     )
+
+
+            #     chat_service.add_message_by_chat_id(
+            #         chat_id=chat_id,
+            #         role="user",
+            #         content=question,
+            #         session=user_db_session,
+            #         title=question,
+            #     )
+
+            #     # print(
+            #     #     f"[CHAT DB TIMING] user add+commit: "
+            #     #     f"{time.perf_counter() - add_start:.3f}s"
+            #     # )
+
+            # print(
+            #     f"[CHAT DB TIMING] user message + title: "
+            #     f"{time.perf_counter() - user_message_start:.3f}s"
+            # )
+            
             for event in answer_service.stream_answer(
-                question=question,
+
+                request=request,
+
                 top_k=8,
-                conversation_history=(
-                    conversation_history
-                ),
             ):
+                if first_event_time is None:
+                    first_event_time = (
+                        time.perf_counter()
+                        - stream_start
+                    )
+
+                    print(
+                        f"[TIMING] stream_answer first event: "
+                        f"{first_event_time:.3f}s"
+                    )
+                
+                if event["type"] == "token":
+
+                    yield json.dumps(
+                        event,
+                        ensure_ascii=False,
+                    ) + "\n"
+
+                    # if not user_message_persisted:
+                    #     user_message_persisted = True
+
+                    #     user_message_start = time.perf_counter()
+
+                    #     try:
+                    #         with SessionLocal() as user_db_session:
+
+                    #             user_chat = (
+                    #                 chat_service.get_chat_orm(
+                    #                     browser_id=owner_id,
+                    #                     chat_id=chat_id,
+                    #                     title=question,
+                    #                     session=user_db_session,
+                    #                 )
+                    #             )
+
+                    #             if user_chat is not None:
+                    #                 chat_service.add_message_for_chat(
+                    #                     chat=user_chat,
+                    #                     role="user",
+                    #                     content=question,
+                    #                     session=user_db_session,
+                    #                 )
+
+                    #         print(
+                    #             f"[CHAT DB TIMING] user message + title: "
+                    #             f"{time.perf_counter() - user_message_start:.3f}s"
+                    #         )
+
+                    #     except Exception:
+                    #         traceback.print_exc()
+
+                    # continue
 
                 if event["type"] == "done":
-                    result = event["result"]
+                    answer_result = event["result"]
 
-                    assistant_message = (
-                        chat_service.add_message(
-                            browser_id=owner_id,
-                            chat_id=chat_id,
-                            role="assistant",
-                            content=result["answer"],
-                            sources=result.get(
+                    # user_message_start = time.perf_counter()
+
+                    # with SessionLocal() as user_db_session:
+                    #     db_connection_start = time.perf_counter()
+
+                    #     user_db_session.connection()
+
+                    #     print(
+                    #         f"[CHAT DB TIMING] user session connection: "
+                    #         f"{time.perf_counter() - db_connection_start:.3f}s"
+                    #     )
+
+                    #     chat_service.add_message_by_chat_id(
+                    #         chat_id=chat_id,
+                    #         role="user",
+                    #         content=question,
+                    #         session=user_db_session,
+                    #         title=question,
+                    #     )
+
+                    # print(
+                    #     f"[CHAT DB TIMING] user message + title: "
+                    #     f"{time.perf_counter() - user_message_start:.3f}s"
+                    # )
+
+                    # Only commit the staged prospectus context and
+                    # record the assistant turn once an answer was
+                    # actually produced, so a failed/empty retrieval
+                    # never pollutes ProspectusContext or the
+                    # short-term turn history.
+                    if (
+                        request.pending_context
+                        and answer_result.get("answer")
+                    ):
+                        conversation_manager.commit_prospectus_context(
+                            request,
+                            session,
+                        )
+
+                    session.add_turn(
+                        "assistant",
+                        answer_result["answer"],
+                        answer_result.get("curriculum_route"),
+                    )
+
+                    conversation_store.add_message(
+                        chat_id,
+                        {
+                            "id": f"assistant-{int(time.time() * 1000)}",
+                            "role": "assistant",
+                            "content": answer_result["answer"],
+                            "sources": answer_result.get(
                                 "sources",
                                 [],
                             ),
-                            page_references=result.get(
+                            "page_references": answer_result.get(
                                 "page_references",
                                 [],
                             ),
-                            curriculum_route=result.get(
-                                "curriculum_route",
-                                {},
-                            ),
-                        )
+                            "created_at": time.time(),
+                        },
                     )
+                    # assistant_message = (
+                    #     chat_service.add_message(
+                    #         browser_id=owner_id,
+                    #         chat_id=chat_id,
+                    #         role="assistant",
+                    #         content=answer_result["answer"],
+                    #         sources=answer_result.get(
+                    #             "sources",
+                    #             [],
+                    #         ),
+                    #         page_references=answer_result.get(
+                    #             "page_references",
+                    #             [],
+                    #         ),
+                    #         curriculum_route=answer_result.get(
+                    #             "curriculum_route",
+                    #             {},
+                    #         ),
+                    #         session=db_session,
+                    #     )
+                    # )
+                    # assistant_db_session = SessionLocal()
 
-                    event = {
-                        "type": "done",
-                        "answer": result["answer"],
-                        "status": result["status"],
-                        "sources": result.get(
+                    # try:
+                    #     assistant_chat = chat_service.get_chat_orm(
+                    #         browser_id=owner_id,
+                    #         chat_id=chat_id,
+                    #         session=assistant_db_session,
+                    #     )
+
+                    #     if assistant_chat is None:
+                    #         raise RuntimeError(
+                    #             "Chat disappeared before assistant message persistence."
+                    #         )
+
+                    #     assistant_message = (
+                    #         chat_service.add_message_for_chat(
+                    #             chat=assistant_chat,
+                    #             role="assistant",
+                    #             content=answer_result["answer"],
+                    #             sources=answer_result.get(
+                    #                 "sources",
+                    #                 [],
+                    #             ),
+                    #             page_references=answer_result.get(
+                    #                 "page_references",
+                    #                 [],
+                    #             ),
+                    #             curriculum_route=answer_result.get(
+                    #                 "curriculum_route",
+                    #                 {},
+                    #             ),
+                    #             session=assistant_db_session,
+                    #             commit=False,
+                    #         )
+                    #     )
+                    # assistant_db_session = SessionLocal()
+
+                    # try:
+                    #     assistant_message = (
+                    #         chat_service.add_message_by_chat_id(
+                    #             chat_id=chat_id,
+                    #             role="assistant",
+                    #             content=answer_result["answer"],
+                    #             sources=answer_result.get(
+                    #                 "sources",
+                    #                 [],
+                    #             ),
+                    #             page_references=answer_result.get(
+                    #                 "page_references",
+                    #                 [],
+                    #             ),
+                    #             curriculum_route=answer_result.get(
+                    #                 "curriculum_route",
+                    #                 {},
+                    #             ),
+                    #             session=assistant_db_session,
+                    #             commit=False,
+                    #         )
+                    #     )
+
+                    #     event = {
+                    #         "type": "done",
+                    #         "answer": answer_result["answer"],
+                    #         "status": answer_result["status"],
+                    #         "sources": answer_result.get(
+                    #             "sources",
+                    #             [],
+                    #         ),
+                    #         "page_references": answer_result.get(
+                    #             "page_references",
+                    #             [],
+                    #         ),
+                    #         "message": assistant_message,
+                    #     }
+
+
+                    #     yield json.dumps(
+                    #         event,
+                    #         ensure_ascii=False,
+                    #     ) + "\n"
+
+                    #     commit_start = time.perf_counter()
+
+                    #     assistant_db_session.commit()
+
+                    #     print(
+                    #         f"[CHAT DB TIMING] assistant post-stream commit: "
+                    #         f"{time.perf_counter() - commit_start:.3f}s"
+                    #     )
+
+                    # finally:
+                    #     assistant_db_session.close()
+
+                    assistant_message = {
+                        "id": f"assistant-{int(time.time() * 1000)}",
+                        "role": "assistant",
+                        "content": answer_result["answer"],
+                        "sources": answer_result.get(
                             "sources",
                             [],
                         ),
-                        "page_references": result.get(
+                        "page_references": answer_result.get(
+                            "page_references",
+                            [],
+                        ),
+                        "created_at": str(time.time()),
+                    }
+
+                    event = {
+                        "type": "done",
+                        "answer": answer_result["answer"],
+                        "status": answer_result["status"],
+                        "sources": answer_result.get(
+                            "sources",
+                            [],
+                        ),
+                        "page_references": answer_result.get(
                             "page_references",
                             [],
                         ),
                         "message": assistant_message,
                     }
 
-                yield json.dumps(
-                    event,
-                    ensure_ascii=False,
-                ) + "\n"
+                    yield json.dumps(
+                        event,
+                        ensure_ascii=False,
+                    ) + "\n"
 
-        except Exception as exc:
-            yield json.dumps(
-                {
-                    "type": "error",
-                    "message": str(exc),
-                },
-                ensure_ascii=False,
-            ) + "\n"
+        # except Exception as exc:
+        #     yield json.dumps(
+        #         {
+        #             "type": "error",
+        #             "message": str(exc),
+        #         },
+        #         ensure_ascii=False,
+        #     ) + "\n"
+        except Exception:
+
+            traceback.print_exc()
+
+            raise
+
+        finally:
+
+            print(
+                f"[TIMING] stream_answer total: "
+                f"{time.perf_counter() - stream_start:.3f}s"
+            )
+            
+            # db_session.close()
+
 
     return StreamingResponse(
         event_stream(),
@@ -271,163 +1142,283 @@ def send_message_stream(
     )
 
 
-@router.post("/chats/{chat_id}/messages")
-def send_message(
-    chat_id: str,
-    payload: dict,
-    x_chat_owner_id: str | None = Header(
-        default=None
-    ),
-):
+# @router.post("/chats/{chat_id}/messages")
+# def send_message(
+#     chat_id: str,
+#     payload: dict,
+#     x_chat_owner_id: str | None = Header(
+#         default=None
+#     ),
+# ):
 
-    owner_id = get_chat_owner_id(
-        x_chat_owner_id
-    )
+#     owner_id = get_chat_owner_id(
+#         x_chat_owner_id
+#     )
 
-    question = str(
-        payload.get("question", "")
-    ).strip()
+#     question = str(
+#         payload.get("question", "")
+#     ).strip()
 
-    if not question:
-        raise HTTPException(
-            status_code=400,
-            detail="Question cannot be empty.",
-        )
+#     if not question:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Question cannot be empty.",
+#         )
 
-    chat = chat_service.get_chat(
-        browser_id=owner_id,
-        chat_id=chat_id,
-    )
+#     chat = chat_service.get_chat(
+#         browser_id=owner_id,
+#         chat_id=chat_id,
+#     )
 
-    if chat is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Chat not found.",
-        )
+#     if chat is None:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Chat not found.",
+#         )
 
-    conversation_history = (
-        chat_service.get_messages(
-            browser_id=owner_id,
-            chat_id=chat_id,
-        )
-    )[-6:]
+#     session = session_manager.get_session(
+#         chat_id,
+#     )
 
-    chat_service.add_message(
-        browser_id=owner_id,
-        chat_id=chat_id,
-        role="user",
-        content=question,
-    )
+#     conversation_history = (
+#         chat_service.get_messages(
+#             browser_id=owner_id,
+#             chat_id=chat_id,
+#         )
+#     )[-6:]
 
-    if chat["title"] == "New Chat":
+#     chat_service.add_message(
+#         browser_id=owner_id,
+#         chat_id=chat_id,
+#         role="user",
+#         content=question,
+#     )
 
-        chat_service.update_title(
-            browser_id=owner_id,
-            chat_id=chat_id,
-            title=question,
-        )
+#     # session.add_turn(
+#     #     "user",
+#     #     question,
+#     # )
 
-    answer_service = load_answer_service()
+#     if chat["title"] == "New Chat":
 
-    result = answer_service.answer(
-        question=question,
-        top_k=8,
-        conversation_history=(
-            conversation_history
-        ),
-    )
+#         chat_service.update_title(
+#             browser_id=owner_id,
+#             chat_id=chat_id,
+#             title=question,
+#         )
 
-    assistant_message = (
-        chat_service.add_message(
-            browser_id=owner_id,
-            chat_id=chat_id,
-            role="assistant",
-            content=result["answer"],
-            sources=result.get(
-                "sources",
-                [],
-            ),
-            page_references=result.get(
-                "page_references",
-                [],
-            ),
-            curriculum_route=result.get(
-                "curriculum_route",
-                {},
-            ),
-        )
-    )
+#     conversation_manager = (
+#         load_conversation_manager()
+#     )
 
-    return {
-        "answer": result["answer"],
-        "status": result["status"],
-        "sources": result.get(
-            "sources",
-            [],
-        ),
-        "page_references": result.get(
-            "page_references",
-            [],
-        ),
-        "message": assistant_message,
-    }
+#     state = ConversationState(
+#         session_id=chat_id,
+#         recent_messages=conversation_history,
+#     )
+
+#     result = conversation_manager.process(
+
+#         query=question,
+
+#         state=state,
+#         session=session,
+#     )
+
+#     print(
+#         f"[DEBUG] RESULT TYPE: {type(result).__name__}"
+#     )
+
+#     if isinstance(
+#         result,
+#         ConversationResponse,
+#     ):
+
+#         assistant_message = (
+#             chat_service.add_message(
+
+#                 browser_id=owner_id,
+
+#                 chat_id=chat_id,
+
+#                 role="assistant",
+
+#                 content=result.answer,
+#             )
+#         )
+
+#         return {
+
+#             "answer": result.answer,
+
+#             "status": "handled",
+
+#             "sources": [],
+
+#             "page_references": [],
+
+#             "message": assistant_message,
+#         }
+
+#     # `result` is the already-interpreted ConversationRequest
+#     # returned by ProspectusHandler's passthrough (rewritten_query
+#     # with follow-ups resolved, pending_context staged) - reuse it
+#     # instead of guessing at the raw question.
+#     request = result
+
+#     # answer_service = RescueAnswerService(
+#     #     collection_name=(
+#     #         document_manager
+#     #         .get_active_document()["collection_name"]
+#     #     ),
+#     # )
+#     active_document = (
+#         document_manager.get_active_document()
+#     )
+
+#     answer_service = get_answer_service(
+#         active_document["document_id"],
+#         active_document["collection_name"],
+#     )
+
+#     answer_result = None
+
+#     for event in answer_service.stream_answer(
+#         request=request,
+#         top_k=8,
+#     ):
+#         if event["type"] == "done":
+#             answer_result = event["result"]
+
+#     if answer_result is None:
+#         raise HTTPException(
+#             status_code=502,
+#             detail="No answer was produced.",
+#         )
+
+#     print(
+#         "\n[ANSWER RESULT DEBUG]",
+#         answer_result,
+#     )
+
+#     # Only commit the staged prospectus context and record the
+#     # assistant turn once an answer was actually produced, so a
+#     # failed/empty retrieval never pollutes ProspectusContext or the
+#     # short-term turn history.
+#     if (
+#         request.pending_context
+#         and answer_result.get("answer")
+#     ):
+#         conversation_manager.commit_prospectus_context(
+#             request,
+#             session,
+#         )
+
+#     session.add_turn(
+#         "assistant",
+#         answer_result["answer"],
+#         answer_result.get("curriculum_route"),
+#     )
+
+#     print("\n========== SESSION AFTER ASSISTANT TURN ==========")
+#     print(session.messages)
+#     print("==================================================")
+
+#     assistant_message = (
+#         chat_service.add_message(
+#             browser_id=owner_id,
+#             chat_id=chat_id,
+#             role="assistant",
+#             content=answer_result["answer"],
+#             sources=answer_result.get(
+#                 "sources",
+#                 [],
+#             ),
+#             page_references=answer_result.get(
+#                 "page_references",
+#                 [],
+#             ),
+#             curriculum_route=answer_result.get(
+#                 "curriculum_route",
+#                 {},
+#             ),
+#         )
+#     )
+
+#     return {
+#         "answer": answer_result["answer"],
+#         "status": answer_result["status"],
+#         "sources": answer_result.get(
+#             "sources",
+#             [],
+#         ),
+#         "page_references": answer_result.get(
+#             "page_references",
+#             [],
+#         ),
+#         "message": assistant_message,
+#     }
 
 
-@router.patch("/chats/{chat_id}")
-def rename_chat(
-    chat_id: str,
-    payload: dict,
-    x_chat_owner_id: str | None = Header(
-        default=None
-    ),
-):
+# @router.patch("/chats/{chat_id}")
+# def rename_chat(
+#     chat_id: str,
+#     payload: dict,
+#     x_chat_owner_id: str | None = Header(
+#         default=None
+#     ),
+# ):
 
-    owner_id = get_chat_owner_id(
-        x_chat_owner_id
-    )
+#     owner_id = get_chat_owner_id(
+#         x_chat_owner_id
+#     )
 
-    title = str(
-        payload.get("title", "")
-    ).strip()
+#     title = str(
+#         payload.get("title", "")
+#     ).strip()
 
-    try:
-        chat_service.update_title(
-            browser_id=owner_id,
-            chat_id=chat_id,
-            title=title,
-        )
+#     try:
+#         chat_service.update_title(
+#             browser_id=owner_id,
+#             chat_id=chat_id,
+#             title=title,
+#         )
 
-    except PermissionError as error:
-        raise HTTPException(
-            status_code=404,
-            detail="Chat not found.",
-        ) from error
+#     except PermissionError as error:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Chat not found.",
+#         ) from error
 
-    return {"message": "Chat renamed."}
+#     return {"message": "Chat renamed."}
 
 
-@router.delete("/chats/{chat_id}")
-def delete_chat(
-    chat_id: str,
-    x_chat_owner_id: str | None = Header(
-        default=None
-    ),
-):
+# @router.delete("/chats/{chat_id}")
+# def delete_chat(
+#     chat_id: str,
+#     x_chat_owner_id: str | None = Header(
+#         default=None
+#     ),
+# ):
 
-    owner_id = get_chat_owner_id(
-        x_chat_owner_id
-    )
+#     owner_id = get_chat_owner_id(
+#         x_chat_owner_id
+#     )
 
-    deleted = chat_service.delete_chat(
-        browser_id=owner_id,
-        chat_id=chat_id,
-    )
+#     deleted = chat_service.delete_chat(
+#         browser_id=owner_id,
+#         chat_id=chat_id,
+#     )
 
-    if not deleted:
-        raise HTTPException(
-            status_code=404,
-            detail="Chat not found.",
-        )
+#     if not deleted:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Chat not found.",
+#         )
 
-    return {"message": "Chat deleted."}
+#     session_manager.delete_session(
+#         chat_id,
+#     )
 
+
+
+#     return {"message": "Chat deleted."}

@@ -1,12 +1,4 @@
 from typing import Any
-from langchain_text_splitters import (
-    RecursiveCharacterTextSplitter,
-)
-
-from src.schemas.chunk import (
-    ParentChunk,
-    ChildChunk,
-)
 
 class StructuredChunkBuilder:
     """
@@ -20,52 +12,68 @@ class StructuredChunkBuilder:
         record_results: dict[str, Any],
     ) -> dict[str, list]:
 
-        parent_chunks: list[ParentChunk] = []
-        child_chunks: list[ChildChunk] = []
+        # parent_chunks: list[ParentChunk] = []
+        # child_chunks: list[ChildChunk] = []
 
-        text_splitter = (
-            RecursiveCharacterTextSplitter(
-                chunk_size=800,
-                chunk_overlap=150,
-                separators=[
-                    "\n\n",
-                    "\n",
-                    ". ",
-                    " ",
-                    "",
-                ],
-            )
-        )
+        # text_splitter = (
+        #     RecursiveCharacterTextSplitter(
+        #         chunk_size=800,
+        #         chunk_overlap=150,
+        #         separators=[
+        #             "\n\n",
+        #             "\n",
+        #             ". ",
+        #             " ",
+        #             "",
+        #         ],
+        #     )
+        # )
 
-        for index, (
-            record_type,
-            record,
-        ) in enumerate(
-            self._all_records(
-                record_results
-            )
+        # for index, (
+        #     record_type,
+        #     record,
+        # ) in enumerate(
+        #     self._all_records(
+        #         record_results
+        #     )
+        # ):
+
+        #     parent = self._parent_chunk(
+        #         record_type=record_type,
+        #         record=record,
+        #         index=index,
+        #     )
+
+        #     parent_chunks.append(
+        #         parent
+        #     )
+
+        #     child_chunks.extend(
+        #         self._child_chunks(
+        #             parent_chunk=parent,
+        #             text_splitter=text_splitter,
+        #         )
+        #     )
+
+        # return {
+        #     "parent_chunks": parent_chunks,
+        #     "child_chunks": child_chunks,
+        # }
+        chunks = []
+
+        for index, (record_type, record) in enumerate(
+            self._all_records(record_results)
         ):
-
-            parent = self._parent_chunk(
-                record_type=record_type,
-                record=record,
-                index=index,
-            )
-
-            parent_chunks.append(
-                parent
-            )
-
-            child_chunks.extend(
-                self._child_chunks(
-                    parent_chunk=parent,
-                    text_splitter=text_splitter,
+            chunks.append(
+                self._chunk(
+                    record_type=record_type,
+                    record=record,
+                    index=index,
                 )
             )
 
         return {
-            "parent_chunks": parent_chunks,
-            "child_chunks": child_chunks,
+            "chunks": chunks,
         }
 
     def _all_records(
@@ -601,6 +609,32 @@ class StructuredChunkBuilder:
 
         if getattr(
             record,
+            "applicability",
+            None,
+        ):
+            lines.append(
+                "Applicability:"
+            )
+            lines.append(
+                record.applicability
+            )
+            lines.append("")
+
+        if getattr(
+            record,
+            "programme_scope",
+            None,
+        ):
+            lines.append(
+                "Programme Scope:"
+            )
+            lines.append(
+                record.programme_scope
+            )
+            lines.append("")
+
+        if getattr(
+            record,
             "scheme",
             None,
         ):
@@ -609,6 +643,7 @@ class StructuredChunkBuilder:
                 record.scheme
             )
             lines.append("")
+
 
         if getattr(
             record,
@@ -1063,17 +1098,121 @@ class StructuredChunkBuilder:
         return "\n".join(lines)
     
 
-    def _parent_chunk(
+    # def _parent_chunk(
+    #     self,
+    #     *,
+    #     record_type: str,
+    #     record: Any,
+    #     index: int,
+    # ) -> ParentChunk:
+
+    #     chunk_id = (
+    #         f"structured-{record_type}-{index}"
+    #     )
+
+    #     page = getattr(
+    #         record,
+    #         "source_page",
+    #         0,
+    #     )
+
+    #     source_heading = getattr(
+    #         record,
+    #         "source_heading",
+    #         "",
+    #     )
+
+    #     record_label = (
+    #         record_type.replace(
+    #             "_",
+    #             " ",
+    #         )
+    #         .title()
+    #     )
+
+    #     if source_heading:
+
+    #         heading = (
+    #             f"{record_label} | "
+    #             f"{source_heading}"
+    #         )
+
+    #     else:
+
+    #         heading = record_label
+
+    #     metadata = {
+    #         "structured": True,
+    #         "record_type": record_type,
+    #         "page": page,
+    #         "source_heading": source_heading,
+    #     }
+
+    #     return ParentChunk(
+    #         chunk_id=chunk_id,
+    #         page_number=page,
+    #         heading=heading,
+    #         content=self._record_text(
+    #             record
+    #         ),
+    #         metadata=metadata,
+    #     )
+    
+    # def _child_chunks(
+    #     self,
+    #     *,
+    #     parent_chunk: ParentChunk,
+    #     text_splitter: RecursiveCharacterTextSplitter,
+    # ) -> list[ChildChunk]:
+
+    #     children: list[ChildChunk] = []
+
+    #     full_text = (
+    #         f"{parent_chunk.heading}\n\n"
+    #         f"{parent_chunk.content}"
+    #     )
+
+    #     pieces = text_splitter.split_text(
+    #         full_text
+    #     )
+
+    #     for index, piece in enumerate(
+    #         pieces
+    #     ):
+
+    #         children.append(
+    #             ChildChunk(
+    #                 chunk_id=(
+    #                     f"{parent_chunk.chunk_id}"
+    #                     f"-{index}"
+    #                 ),
+    #                 parent_chunk_id=(
+    #                     parent_chunk.chunk_id
+    #                 ),
+    #                 page_number=(
+    #                     parent_chunk.page_number
+    #                 ),
+    #                 heading=(
+    #                     parent_chunk.heading
+    #                 ),
+    #                 content=piece,
+    #                 metadata=(
+    #                     parent_chunk.metadata
+    #                 ),
+    #             )
+    #         )
+
+    #     return children
+
+    def _chunk(
         self,
         *,
         record_type: str,
         record: Any,
         index: int,
-    ) -> ParentChunk:
+    ) -> dict:
 
-        chunk_id = (
-            f"structured-{record_type}-{index}"
-        )
+        text = self._record_text(record)
 
         page = getattr(
             record,
@@ -1087,85 +1226,18 @@ class StructuredChunkBuilder:
             "",
         )
 
-        record_label = (
-            record_type.replace(
-                "_",
-                " ",
-            )
-            .title()
-        )
-
-        if source_heading:
-
-            heading = (
-                f"{record_label} | "
-                f"{source_heading}"
-            )
-
-        else:
-
-            heading = record_label
-
-        metadata = {
-            "structured": True,
-            "record_type": record_type,
-            "page": page,
-            "source_heading": source_heading,
-        }
-
-        return ParentChunk(
-            chunk_id=chunk_id,
-            page_number=page,
-            heading=heading,
-            content=self._record_text(
-                record
+        return {
+            "chunk_id": (
+                f"structured-{record_type}-{index}"
             ),
-            metadata=metadata,
-        )
-    
-    def _child_chunks(
-        self,
-        *,
-        parent_chunk: ParentChunk,
-        text_splitter: RecursiveCharacterTextSplitter,
-    ) -> list[ChildChunk]:
-
-        children: list[ChildChunk] = []
-
-        full_text = (
-            f"{parent_chunk.heading}\n\n"
-            f"{parent_chunk.content}"
-        )
-
-        pieces = text_splitter.split_text(
-            full_text
-        )
-
-        for index, piece in enumerate(
-            pieces
-        ):
-
-            children.append(
-                ChildChunk(
-                    chunk_id=(
-                        f"{parent_chunk.chunk_id}"
-                        f"-{index}"
-                    ),
-                    parent_chunk_id=(
-                        parent_chunk.chunk_id
-                    ),
-                    page_number=(
-                        parent_chunk.page_number
-                    ),
-                    heading=(
-                        parent_chunk.heading
-                    ),
-                    content=piece,
-                    metadata=(
-                        parent_chunk.metadata
-                    ),
-                )
-            )
-
-        return children
+            "chunk_type": record_type,
+            "content": text,
+            "embedding_text": text,
+            "metadata": {
+                "structured": True,
+                "record_type": record_type,
+                "page": page,
+                "source_heading": source_heading,
+            },
+        }
     

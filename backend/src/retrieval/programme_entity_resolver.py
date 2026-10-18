@@ -20,6 +20,8 @@ class ProgrammeEntityResolver:
         "bachelor of engineering ",
         "bachelor of science in ",
         "bachelor of science ",
+        "BE",
+        "BS"
     )
 
     ALIAS_STOP_WORDS = {
@@ -101,17 +103,80 @@ class ProgrammeEntityResolver:
     #         alias_matches
     #     )
 
+    # def resolve(
+    #     self,
+    #     question: str,
+    # ) -> list[dict]:
+
+    #     normalized_question = self._normalize(question)
+
+    #     if not normalized_question:
+    #         return []
+
+    #     # Collect BOTH canonical and alias matches.
+    #     matches = []
+
+    #     matches.extend(
+    #         self._canonical_name_matches(
+    #             normalized_question
+    #         )
+    #     )
+
+    #     matches.extend(
+    #         self._alias_matches(
+    #             question=question,
+    #             normalized_question=normalized_question,
+    #         )
+    #     )
+
+    #     matches = self._deduplicate(matches)
+
+    #     if not matches:
+    #         return []
+
+    #     matches = self._apply_context_disambiguation(
+    #         question=normalized_question,
+    #         matches=matches,
+    #     )
+
+    #     return self._deduplicate(matches)
+
     def resolve(
         self,
         question: str,
     ) -> list[dict]:
 
-        normalized_question = self._normalize(question)
+        normalized_question = self._normalize(
+            question
+        )
 
         if not normalized_question:
             return []
 
-        # Collect BOTH canonical and alias matches.
+        # # Prefer explicit canonical programme names.
+        # # If the question contains a specific programme name,
+        # # do not let shorter aliases create unrelated matches.
+        # canonical_matches = (
+        #     self._canonical_name_matches(
+        #         normalized_question
+        #     )
+        # )
+
+        # if canonical_matches:
+
+        #     canonical_matches = (
+        #         self._apply_context_disambiguation(
+        #             question=normalized_question,
+        #             matches=canonical_matches,
+        #         )
+        #     )
+
+        #     return self._prefer_longest(
+        #         canonical_matches
+        #     )
+        # Collect canonical and alias matches together.
+        # This is important when one programme uses a full
+        # degree title and another uses a shortened title.
         matches = []
 
         matches.extend(
@@ -129,15 +194,61 @@ class ProgrammeEntityResolver:
 
         matches = self._deduplicate(matches)
 
-        if not matches:
-            return []
+        if matches:
+            matches = self._apply_context_disambiguation(
+                question=normalized_question,
+                matches=matches,
+            )
 
-        matches = self._apply_context_disambiguation(
-            question=normalized_question,
-            matches=matches,
+            return self._deduplicate(matches)
+
+        # No canonical programme name was found.
+        # Fall back to aliases and abbreviations.
+        alias_matches = self._alias_matches(
+            question=question,
+            normalized_question=normalized_question,
         )
 
-        return self._deduplicate(matches)
+        if alias_matches:
+            alias_matches = (
+                self._apply_context_disambiguation(
+                    question=normalized_question,
+                    matches=alias_matches,
+                )
+            )
+
+            return self._deduplicate(
+                alias_matches
+            )
+
+# Natural shortened programme name.
+
+        print(
+            "[RESOLVER SUBSET DEBUG]",
+            normalized_question,
+        )
+        subset_matches = self._token_subset_matches(
+            normalized_question,
+        )
+
+        print(
+            "[RESOLVER SUBSET RESULT]",
+            subset_matches,
+        )
+
+        if not subset_matches:
+            return []
+
+        subset_matches = (
+            self._apply_context_disambiguation(
+                question=normalized_question,
+                matches=subset_matches,
+            )
+        )
+
+        return self._deduplicate(
+            subset_matches
+        )
 
 
 
@@ -275,6 +386,96 @@ class ProgrammeEntityResolver:
 
         return matches
 
+    def _token_subset_matches(
+        self,
+        normalized_question: str,
+    ) -> list[dict]:
+
+        normalized_question = re.sub(
+            r"\b\d+(?:st|nd|rd|th)?\s+(?:semester|year)\b",
+            " ",
+            normalized_question,
+        )
+
+        question_tokens = set(
+            normalized_question.split()
+        )
+
+        # Common natural abbreviations.
+        if "eng" in question_tokens:
+            question_tokens.add("engineering")
+    
+        if "sci" in question_tokens:
+            question_tokens.add("science")
+    
+        if "tech" in question_tokens:
+            question_tokens.add("technology")
+
+    # Ignore words that are not useful for identifying
+    # a programme.
+        ignored = {
+            "what",
+            "are",
+            "is",
+            "the",
+            "courses",
+            "course",
+            "subjects",
+            "subject",
+            "semester",
+            "year",
+            "of",
+            "in",
+            "for",
+            "this",
+            "that",
+            "first",
+            "second",
+            "third",
+            "fourth",
+            "final",
+        }
+
+        question_tokens -= ignored
+
+        print(
+            "[RESOLVER QUESTION TOKENS]",
+            question_tokens,
+        )
+
+        if len(question_tokens) < 2:
+            return []
+
+        candidates = []
+
+        print(
+            "[RESOLVER PROGRAMMES]",
+            [
+                (
+                    p.get("programme"),
+                    p.get("programme_code"),
+                )
+                for p in self.programmes
+            ],
+        )
+
+        for programme in self.programmes:
+
+            programme_tokens = set(
+                self._normalize(
+                    programme["programme"]
+                ).split()
+            )
+
+            if not question_tokens.issubset(
+                programme_tokens
+            ):
+                continue
+
+            candidates.append(programme)
+
+        return self._deduplicate(candidates)
+
     def _alias_matches(
         self,
         *,
@@ -346,15 +547,6 @@ class ProgrammeEntityResolver:
             matched.extend(
                 programmes
             )
-        print(
-    "MATCHED ALIAS:",
-        alias,
-        "->",
-        [
-            p["programme_code"]
-            for p in programmes
-        ],
-    )
 
         return matched
 

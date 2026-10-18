@@ -12,18 +12,19 @@ export interface ChatSource {
 
 export interface PageReference {
   document: string;
-  page_number: number;
+  // page_number: number;
+  page_number: number | null;
   page_path?: string | null;
   page_url?: string | null;
   reason?: string | null;
 }
 
-export interface ChatSummary {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-}
+// export interface ChatSummary {
+//   id: string;
+//   title: string;
+//   created_at: string;
+//   updated_at: string;
+// }
 
 export interface StoredMessage {
   id: string;
@@ -45,9 +46,9 @@ export interface ChatMessage {
   createdAt: number;
 }
 
-export interface ChatListResponse {
-  chats: ChatSummary[];
-}
+// export interface ChatListResponse {
+//   chats: ChatSummary[];
+// }
 
 export interface ChatMessagesResponse {
   messages: StoredMessage[];

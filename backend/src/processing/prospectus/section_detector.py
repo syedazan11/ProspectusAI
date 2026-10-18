@@ -46,22 +46,138 @@ class ProspectusSectionDetector:
         re.IGNORECASE,
     )
 
-    DOMAIN_SECTION_PATTERNS = {
+    # DOMAIN_SECTION_PATTERNS = {
+    #     "faculty_roles": re.compile(
+    #         r"\bTeaching\s+Departments\b",
+    #         re.IGNORECASE,
+    #     ),
+    #     "eligibility": re.compile(
+    #         r"\bEligibility\b",
+    #         # r"\bEligibility\s+Conditions\b",
+    #         re.IGNORECASE,
+    #     ),
+    #     "admission_process": re.compile(
+    #         r"\bMode\s+of\s+Admission\b",
+    #         re.IGNORECASE,
+    #     ),
+    #     "fee_structure": re.compile(
+    #         r"\bFee\s+Structure\b",
+    #         re.IGNORECASE,
+    #     ),
+    # }
+
+    # CHAPTER_SECTION_PATTERNS = {
+    #     "academic_programmes": re.compile(
+    #         r"\bAcademic\s+Program",
+    #         re.IGNORECASE,
+    #     ),
+    #     "course_of_studies": re.compile(
+    #         r"\bCourse\s+of\s+Studies\b",
+    #         re.IGNORECASE,
+    #     ),
+    #     "mode_of_application": re.compile(
+    #         r"\bMode\s+of\s+Application\b",
+    #         re.IGNORECASE,
+    #     ),
+    #     "admission_categories": re.compile(
+    #         r"\bAdmission\s+Categor",
+    #         re.IGNORECASE,
+    #     ),
+    #     "mode_of_admission": re.compile(
+    #         r"\bMode\s+of\s+Admission\b",
+    #        re.IGNORECASE,
+    #     ),
+    #     "examinations": re.compile(
+    #         r"\bExamination",
+    #         re.IGNORECASE,
+    #     ),
+    #     "fee_structure": re.compile(
+    #         r"\bFee\s+Structure\b",
+    #         re.IGNORECASE,
+    #     ),
+    #     "scholarships": re.compile(
+    #         r"\bScholarship|\bStipend|\bAward",
+    #         re.IGNORECASE,
+    #     ),
+    #     "student_support": re.compile(
+    #         r"\bInfrastructure\b|\bStudent(?:s)?\s+Facilit",
+    #         re.IGNORECASE,
+    #     ),
+    #     "student_activities": re.compile(
+    #         r"\bStudent(?:'s|s')?\s+Activit",
+    #         re.IGNORECASE,
+    #     ),
+    #     "discipline": re.compile(
+    #         r"\bDiscipline\b|\bRules?\b",
+    #         re.IGNORECASE,
+    #     ),
+    # }
+
+    CHAPTER_SECTION_PATTERNS = {
+        "academics": [
+            r"\bacademic\s+program",
+            r"\bacademic\s+programme",
+            r"\bacademic\s+programmes",
+            r"\bfacult(?:y|ies)\b",
+        ],
+        "application": [
+            r"\bapplication\b",
+            r"\bapply\b",
+            r"\badmission\s+application\b",
+            r"\bapplication\s+procedure\b",
+        ],
+        "admissions": [
+            r"\bmode\s+of\s+admission\b",
+            r"\badmission\s+process\b",
+            r"\bhow\s+admission\s+works\b",
+        ],
+        "assessment": [
+            r"\bexamination",
+            r"\bassessment\b",
+            r"\bgrading\b",
+            r"\bevaluation\b",
+        ],
+        "finance": [
+            r"\bfee\b",
+            r"\btuition\b",
+            r"\bcharges?\b",
+            r"\bexpenses?\b",
+        ],
+        "scholarships": [
+            r"\bscholarship",
+            r"\bstipend",
+            r"\bfinancial\s+assistance\b",
+            r"\baward",
+        ],
+        "student_support": [
+            r"\bstudent\s+facilit",
+            r"\bstudent\s+services?\b",
+            r"\binfrastructure\b",
+            r"\blibrary\b",
+            r"\bhostel\b",
+        ],
+        "student_life": [
+            r"\bstudent(?:'s|s')?\s+activit",
+            r"\bstudent\s+activit",
+            r"\bsociet",
+            r"\bclubs?\b",
+            r"\bsports?\b",
+        ],
+            "policies": [
+            r"\bdiscipline\b",
+            r"\brules?\b",
+            r"\bregulations?\b",
+            r"\bcode\s+of\s+conduct\b",
+        ],
+    }
+
+    SUBSECTION_PATTERNS = {
         "faculty_roles": re.compile(
             r"\bTeaching\s+Departments\b",
             re.IGNORECASE,
         ),
         "eligibility": re.compile(
             r"\bEligibility\b",
-            # r"\bEligibility\s+Conditions\b",
-            re.IGNORECASE,
-        ),
-        "admission_process": re.compile(
-            r"\bMode\s+of\s+Admission\b",
-            re.IGNORECASE,
-        ),
-        "fee_structure": re.compile(
-            r"\bFee\s+Structure\b",
             re.IGNORECASE,
         ),
     }
@@ -519,54 +635,87 @@ class ProspectusSectionDetector:
     ) -> list[ProspectusSection]:
         sections: list[ProspectusSection] = []
 
-        chapter_level_domains = {
-            "admission_process",
-            "fee_structure",
-        }
+        # chapter_level_domains = {
+        #     "admission_process",
+        #     "fee_structure",
+        # }
 
-        for section_type, pattern in (
-            self.DOMAIN_SECTION_PATTERNS.items()
-        ):
-            if section_type in chapter_level_domains:
-                section = self._chapter_section_from_title(
-                    pages=pages,
-                    section_type=section_type,
-                    pattern=pattern,
-                )
-            else:
-                section = self._detect_heading_to_next_chapter(
-                    pages=pages,
-                    section_type=section_type,
-                    pattern=pattern,
-                )
+        for section_type, patterns in self.CHAPTER_SECTION_PATTERNS.items():
+            section = self._chapter_section_from_title(
+                pages=pages,
+                section_type=section_type,
+                patterns=patterns,
+            )
 
             if section:
                 sections.append(section)
 
-        for section in sections:
-            print(
-                section.section_type,
-                section.start_page,
-                section.end_page,
+        for section_type, pattern in self.SUBSECTION_PATTERNS.items():
+            section = self._detect_heading_to_next_chapter(
+                pages=pages,
+                section_type=section_type,
+                pattern=pattern,
             )
+
+            if section:
+                sections.append(section)
+
+            # if section_type in chapter_level_domains:
+            #     section = self._chapter_section_from_title(
+            #         pages=pages,
+            #         section_type=section_type,
+            #         pattern=pattern,
+            #     )
+            # else:
+            #     section = self._detect_heading_to_next_chapter(
+            #         pages=pages,
+            #         section_type=section_type,
+            #         pattern=pattern,
+            #     )
+
+            # if section:
+            #     sections.append(section)
+
+        # for section in sections:
+        #     print(
+        #         section.section_type,
+        #         section.start_page,
+        #         section.end_page,
+        #     )
 
         return sections
 
     def _find_chapter_by_title(
         self,
         pages: list[dict[str, Any]],
-        pattern: re.Pattern[str],
+        patterns: list[str],
     ) -> dict[str, Any] | None:
+
+        compiled = [
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in patterns
+        ]
+
         matches = []
 
         for chapter in self._chapter_ranges(pages):
             title = chapter.get("title", "")
 
-            if pattern.search(title):
+            if any(p.search(title) for p in compiled):
                 matches.append(chapter)
+        # matches = []
+
+        # for chapter in self._chapter_ranges(pages):
+        #     title = chapter.get("title", "")
+
+        #     if pattern.search(title):
+        #         matches.append(chapter)
 
         if len(matches) != 1:
             return None
+
+        # for chapter in self._chapter_ranges(pages):
+        #     print(chapter["title"])
 
         return matches[0]
 
@@ -574,11 +723,11 @@ class ProspectusSectionDetector:
         self,
         pages: list[dict[str, Any]],
         section_type: str,
-        pattern: re.Pattern[str],
+        patterns: list[str],
     ) -> ProspectusSection | None:
         chapter = self._find_chapter_by_title(
             pages=pages,
-            pattern=pattern,
+            patterns=patterns,
         )
 
         if chapter is None:
@@ -606,59 +755,59 @@ class ProspectusSectionDetector:
             },
         )
 
-    def _find_chapter_by_title(
-        self,
-        pages: list[dict[str, Any]],
-        pattern: re.Pattern[str],
-    ) -> dict[str, Any] | None:
-        matches = []
+    # def _find_chapter_by_title(
+    #     self,
+    #     pages: list[dict[str, Any]],
+    #     pattern: re.Pattern[str],
+    # ) -> dict[str, Any] | None:
+    #     matches = []
 
-        for chapter in self._chapter_ranges(pages):
-            title = chapter.get("title", "")
+    #     for chapter in self._chapter_ranges(pages):
+    #         title = chapter.get("title", "")
 
-            if pattern.search(title):
-                matches.append(chapter)
+    #         if pattern.search(title):
+    #             matches.append(chapter)
 
-        if len(matches) != 1:
-            return None
+    #     if len(matches) != 1:
+    #         return None
 
-        return matches[0]
+    #     return matches[0]
 
-    def _chapter_section_from_title(
-        self,
-        pages: list[dict[str, Any]],
-        section_type: str,
-        pattern: re.Pattern[str],
-    ) -> ProspectusSection | None:
-        chapter = self._find_chapter_by_title(
-            pages=pages,
-            pattern=pattern,
-        )
+    # def _chapter_section_from_title(
+    #     self,
+    #     pages: list[dict[str, Any]],
+    #     section_type: str,
+    #     pattern: re.Pattern[str],
+    # ) -> ProspectusSection | None:
+    #     chapter = self._find_chapter_by_title(
+    #         pages=pages,
+    #         pattern=pattern,
+    #     )
 
-        if chapter is None:
-            return None
+    #     if chapter is None:
+    #         return None
 
-        return ProspectusSection(
-            section_type=section_type,
-            start_page=chapter["start_page"],
-            end_page=chapter["end_page"],
-            heading=chapter["title"],
-            metadata={
-                "discovery_method": (
-                    "detected_chapter_title_and_boundaries"
-                ),
-                "chapter_number": chapter[
-                    "chapter_number"
-                ],
-                "raw_chapter_number": chapter[
-                    "raw_number"
-                ],
-                "chapter_number_repaired": chapter.get(
-                    "number_repaired",
-                    False,
-                ),
-            },
-        )
+    #     return ProspectusSection(
+    #         section_type=section_type,
+    #         start_page=chapter["start_page"],
+    #         end_page=chapter["end_page"],
+    #         heading=chapter["title"],
+    #         metadata={
+    #             "discovery_method": (
+    #                 "detected_chapter_title_and_boundaries"
+    #             ),
+    #             "chapter_number": chapter[
+    #                 "chapter_number"
+    #             ],
+    #             "raw_chapter_number": chapter[
+    #                 "raw_number"
+    #             ],
+    #             "chapter_number_repaired": chapter.get(
+    #                 "number_repaired",
+    #                 False,
+    #             ),
+    #         },
+    #     )
 
     def _detect_heading_to_next_chapter(
         self,
@@ -1085,12 +1234,22 @@ class ProspectusSectionDetector:
         candidates: list[dict[str, Any]] = []
 
         for index, page in enumerate(pages):
+            # print(f"\nPAGE {page['page_number']}")
+            # text = self._page_text(page)
+            # print(text[:300])
             text = self._page_text(page)
 
-            if not self.CATEGORY_DESCRIPTION_PATTERN.search(
-                text
-            ):
+            matched = self.CATEGORY_DESCRIPTION_PATTERN.search(text)
+
+            # print(f"Pattern matched: {bool(matched)}")
+
+            if not matched:
                 continue
+
+            # if not self.CATEGORY_DESCRIPTION_PATTERN.search(
+            #     text
+            # ):
+            #     continue
 
             subsection_number = (
                 self._category_subsection_number_for_pattern(
@@ -1098,6 +1257,10 @@ class ProspectusSectionDetector:
                     pattern=self.CATEGORY_DESCRIPTION_PATTERN,
                 )
             )
+            # print(
+            #     f"Page {page['page_number']} "
+            #     f"subsection={subsection_number}"
+            # )
 
 
             if subsection_number is None:
@@ -1116,8 +1279,19 @@ class ProspectusSectionDetector:
                 )
             )
 
+            # print(
+            #     f"Page {page['page_number']} "
+            #     f"subsection={subsection_number}"
+            # )
+
+            # print(
+            #     f"regular={has_regular} "
+            #     f"self_finance={has_self_finance}"
+            # )
+
             if has_regular == has_self_finance:
                 continue
+
 
             section_type = (
                 "regular_category_descriptions"
@@ -1177,6 +1351,12 @@ class ProspectusSectionDetector:
                 )
             )
 
+            # print(
+            #     f"ADDED: {section_type} "
+            #     f"{pages[start_index]['page_number']}-"
+            #     f"{pages[end_index]['page_number']}"
+            # )
+
             seen_types.add(section_type)
 
         return sections
@@ -1193,7 +1373,7 @@ class ProspectusSectionDetector:
         ]
 
         category_number_pattern = re.compile(
-            r"^\d+(?:\.\d+)+\s*\([ivxlcdm]+\)$",
+            r"^\d+(?:\.\d+)+\s*\([ivxlcdm]+\)?$",
             re.IGNORECASE,
         )
 
@@ -1210,7 +1390,7 @@ class ProspectusSectionDetector:
             )
 
             inline_match = re.match(
-                r"^(\d+(?:\.\d+)+\([ivxlcdm]+\))",
+                r"^(\d+(?:\.\d+)+\([ivxlcdm]+\)?)",
                 compact_line,
                 re.IGNORECASE,
             )
@@ -1345,7 +1525,7 @@ class ProspectusSectionDetector:
     ) -> int:
 
         match = re.fullmatch(
-            r"(\d+)\.(\d+)\(([ivxlcdm]+)\)",
+            r"(\d+)\.(\d+)\(([ivxlcdm]+)\)?",
             section_number,
             re.IGNORECASE,
         )
@@ -1399,12 +1579,12 @@ class ProspectusSectionDetector:
 
             if next_parent_pattern.search(text):
 
-                print(
-                    f"[NEXT PARENT] "
-                    f"{section_number} -> "
-                    f"{chapter}.{parent + 1} "
-                    f"page {pages[i]['page_number']}"
-                )
+                # print(
+                #     f"[NEXT PARENT] "
+                #     f"{section_number} -> "
+                #     f"{chapter}.{parent + 1} "
+                #     f"page {pages[i]['page_number']}"
+                # )
 
                 return i - 1
             # Stop if we encounter another dense seat matrix.
@@ -1419,12 +1599,12 @@ class ProspectusSectionDetector:
 
                 return i - 1
 
-        print(
-            f"[NO NEXT PARENT] "
-            f"{section_number} "
-            f"chapter end "
-            f"{pages[chapter_end_index]['page_number']}"
-        )
+        # print(
+        #     f"[NO NEXT PARENT] "
+        #     f"{section_number} "
+        #     f"chapter end "
+        #     f"{pages[chapter_end_index]['page_number']}"
+        # )
 
         return chapter_end_index
 

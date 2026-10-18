@@ -64,6 +64,8 @@ class DocumentParser:
         pdf_path: Path,
         document_type: str,
         force_pages: set[int] | None = None,
+        use_checkpoint: bool = True,
+        output_path: Path | None = None,
     ) -> ParsedDocument:
         
         force_pages = force_pages or set()
@@ -79,15 +81,33 @@ class DocumentParser:
             for page in extracted_document.pages
         }
 
-        page_paths = self.splitter.split(pdf_path)
-
-        output_path = (
-            Path(__file__).resolve()
-            .parents[3]
-            / "storage"
-            / "parsed"
-            / f"{pdf_path.stem}.json"
+        # page_paths = self.splitter.split(pdf_path)
+        pages_dir = (
+            pdf_path.parent.parent
+            / "pages"
+            / pdf_path.stem
         )
+
+        page_paths = self.splitter.split(
+            pdf_path,
+            pages_dir=pages_dir,
+        )
+
+        # output_path = (
+        #     Path(__file__).resolve()
+        #     .parents[3]
+        #     / "storage"
+        #     / "parsed"
+        #     / f"{pdf_path.stem}.json"
+        # )
+        if output_path is None:
+            output_path = (
+                Path(__file__).resolve()
+                .parents[3]
+                / "storage"
+                / "parsed"
+                / f"{pdf_path.stem}.json"
+            )
 
         output_path.parent.mkdir(
             parents=True,
@@ -96,7 +116,7 @@ class DocumentParser:
 
         adapter = TypeAdapter(ParsedDocument)
 
-        if output_path.exists():
+        if use_checkpoint and output_path.exists():
             parsed = adapter.validate_json(
                 output_path.read_text(
                     encoding="utf-8"
@@ -138,7 +158,8 @@ class DocumentParser:
             start=1,
         ):
             if (
-                page_number in completed_pages
+                use_checkpoint
+                and page_number in completed_pages
                 and page_number not in force_pages
             ):
                 print(
@@ -384,14 +405,20 @@ class DocumentParser:
                 f" chars={len(authoritative_text)}"
             )
 
-        output_path = (
-            Path(__file__).resolve()
-            .parents[3]
-            / "storage"
-            / "parsed"
-            / f"{pdf_path.stem}.json"
-        )
+        # output_path = (
+        #     Path(__file__).resolve()
+        #     .parents[3]
+        #     / "storage"
+        #     / "parsed"
+        #     / f"{pdf_path.stem}.json"
+        # )
 
+        # output_path.parent.mkdir(
+        #     parents=True,
+        #     exist_ok=True,
+        # )
+
+        # adapter = TypeAdapter(ParsedDocument)
         output_path.parent.mkdir(
             parents=True,
             exist_ok=True,

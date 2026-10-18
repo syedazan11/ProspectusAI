@@ -28,12 +28,9 @@ for section in sections:
     )
 
     if section.section_type in (
+        "scholarships",
+        "student_support",
         "student_life",
-        "hostel",
-        "library",
-        "sports",
-        "transport",
-        "scholarship",
     ):
 
         pages = [
@@ -67,6 +64,10 @@ student_life_pages = [
 ]
 
 print(f"\nStudent Life pages passed: {len(student_life_pages)}")
+print(
+    "Pages:",
+    [page["page_number"] for page in student_life_pages]
+)
 
 # ---------------------------------------------------------
 # DEBUG: Dump every PROSPECTUS 2026 section after page 85
@@ -112,7 +113,7 @@ print("Debug written to prospectus_sections_debug.txt")
 # Run extractor
 # ---------------------------------------------------------
 
-records = extractor.extract(document["pages"])
+records = extractor.extract(student_life_pages)
 
 print("\n========================================")
 print(f"Total records: {len(records)}")

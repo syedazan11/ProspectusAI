@@ -29,6 +29,17 @@ from src.services.table_processing_service import (
 from src.processing.prospectus.record_processing_service import (
     RecordProcessingService,
 )
+from experiments.layout_reconstruction_test import (
+    LayoutReconstructionExperiment,
+)
+
+from experiments.markdown_converter import (
+    MarkdownConverter,
+)
+
+from experiments.semantic_chunker import (
+    create_semantic_chunks,
+)
 from src.schemas.seat_distribution import (
     SeatDistributionDocument,
     SeatDistributionSection,
@@ -46,8 +57,18 @@ class DocumentProcessingService:
     pipeline succeeds.
     """
 
-    def __init__(self) -> None:
-        self.document_manager = DocumentManager()
+    # def __init__(self) -> None:
+    #     self.document_manager = DocumentManager()
+
+    def __init__(
+        self,
+        document_manager: DocumentManager | None = None,
+    ) -> None:
+        self.document_manager = (
+            document_manager
+            if document_manager is not None
+            else DocumentManager()
+        )
 
     def process(
         self,
@@ -119,8 +140,11 @@ class DocumentProcessingService:
             loader = DocumentLoader()
             classifier = DocumentClassifier()
             parser = DocumentParser()
-            cleaner = DocumentCleaner()
+            cleaner = DocumentCleaner(
+                debug_dir=pdf_path.parent.parent / "debug",
+            )
             chunker = DocumentChunker()
+
 
             pdf = loader.validate(pdf_path)
 
@@ -130,6 +154,8 @@ class DocumentProcessingService:
                 pdf,
                 classification["document_type"],
                 force_pages=None,
+                use_checkpoint=False,
+                output_path=parsed_path,
             )
 
             if not parsed_path.exists():
@@ -142,6 +168,49 @@ class DocumentProcessingService:
                     encoding="utf-8-sig"
                 )
             )
+            layout_experiment = (
+                LayoutReconstructionExperiment( 
+                    input_file=parsed_path,
+                    output_dir=pdf_path.parent.parent / "experiments",
+                )
+            )
+            
+
+            layout_experiment.run()
+            layout_path = (
+                pdf_path.parent.parent
+                / "experiments"
+                / "layout_reconstruction.json"
+            )
+
+            with open(
+                layout_path,
+                "r",
+                encoding="utf-8",
+            ) as f:
+                layout_document = json.load(f)
+
+            markdown = MarkdownConverter().convert(
+                layout_document
+            )
+
+            markdown_path = (
+                pdf_path.parent.parent
+                / "experiments"
+                /  f"{pdf_path.stem}.md"
+            )
+
+            markdown_path.write_text(
+                markdown,
+                encoding="utf-8",
+            ) 
+            # create_semantic_chunks(
+            #     markdown_path,
+            # )  
+
+            _, semantic_chunk_path = create_semantic_chunks(
+                markdown_path,
+            )         
 
             sections = (
                 ProspectusSectionDetector().detect(
@@ -455,7 +524,11 @@ class DocumentProcessingService:
                     f"{len(curriculum_records)}"
                 )
 
-            cleaner.clean(parsed_path)
+            # cleaner.clean(parsed_path)
+            cleaner.clean(
+                parsed_path,
+                output_path=cleaned_path,
+            )
 
             if not cleaned_path.exists():
                 raise FileNotFoundError(
@@ -469,8 +542,16 @@ class DocumentProcessingService:
             ) as f:
                 cleaned_document = json.load(f)
 
+            # record_results = (
+            #     RecordProcessingService().process(
+            #         cleaned_document=cleaned_document,
+            #         detected_sections=sections,
+            #     )
+            # )
             record_results = (
-                RecordProcessingService().process(
+                RecordProcessingService(
+                    layout_path=layout_path,
+                ).process(
                     cleaned_document=cleaned_document,
                     detected_sections=sections,
                 )
@@ -478,6 +559,8 @@ class DocumentProcessingService:
 
             chunks = chunker.chunk(
                 cleaned_path,
+                semantic_chunk_path=semantic_chunk_path,
+                output_path=chunks_path,
                 structured_records=record_results,
             )
 
@@ -486,12 +569,15 @@ class DocumentProcessingService:
                     f"Chunks output not found: {chunks_path}"
                 )
 
-            table_service = TableProcessingService()
+            # table_service = TableProcessingService()
 
-            table_result = table_service.process(
-                parsed_path=parsed_path,
-                output_path=tables_path,
-            )
+            # table_result = table_service.process(
+            #     parsed_path=parsed_path,
+            #     output_path=tables_path,
+            # )
+            table_result = {
+                "pages": [],
+            }
 
             # --------------------------------------
             # Route-aware ingestion quality gate
@@ -522,15 +608,22 @@ class DocumentProcessingService:
                 if len(page_text.split()) >= 20:
                     usable_text_pages += 1
 
-            parent_chunks = chunks.get(
-                "parent_chunks",
+            all_chunks = chunks.get(
+                "chunks",
                 [],
             )
 
-            child_chunks = chunks.get(
-                "child_chunks",
-                [],
-            )
+            structured_chunks = [
+                chunk
+                for chunk in all_chunks
+                if "chunk_type" in chunk
+            ]
+
+            semantic_chunks = [
+                chunk
+                for chunk in all_chunks
+                if "chunk_type" not in chunk
+            ]
 
             detected_section_types = {
                 section.section_type
@@ -556,15 +649,12 @@ class DocumentProcessingService:
                 total_pages // 5,
             )
 
-            minimum_parent_chunks = max(
-                5,
-                total_pages // 20,
+            minimum_semantic_chunks = max(
+                20,
+                total_pages,
             )
 
-            minimum_child_chunks = max(
-                10,
-                total_pages // 10,
-            )
+            minimum_structured_chunks = 10
 
             quality_errors = []
 
@@ -579,25 +669,25 @@ class DocumentProcessingService:
                 )
 
             if (
-                len(parent_chunks)
-                < minimum_parent_chunks
+                len(semantic_chunks)
+                < minimum_semantic_chunks
             ):
                 quality_errors.append(
-                    "parent chunk coverage too low: "
-                    f"{len(parent_chunks)} "
+                    "semantic chunk coverage too low: "
+                    f"{len(semantic_chunks)} "
                     f"(minimum "
-                    f"{minimum_parent_chunks})"
+                    f"{minimum_semantic_chunks})"
                 )
 
             if (
-                len(child_chunks)
-                < minimum_child_chunks
+                len(structured_chunks)
+                < minimum_structured_chunks
             ):
                 quality_errors.append(
-                    "child chunk coverage too low: "
-                    f"{len(child_chunks)} "
+                    "structured chunk coverage too low: "
+                    f"{len(structured_chunks)} "
                     f"(minimum "
-                    f"{minimum_child_chunks})"
+                    f"{minimum_structured_chunks})"
                 )
 
             if (
@@ -623,12 +713,18 @@ class DocumentProcessingService:
                 f"{usable_text_pages}"
             )
             print(
-                "Parent chunks: "
-                f"{len(parent_chunks)}"
+                "Semantic chunks: "
+                f"{len(semantic_chunks)}"
             )
+
             print(
-                "Child chunks: "
-                f"{len(child_chunks)}"
+                "Structured chunks: "
+                f"{len(structured_chunks)}"
+            )
+
+            print(
+                "Total chunks: "
+                f"{len(all_chunks)}"
             )
             print(
                 "Detected sections: "
@@ -678,11 +774,14 @@ class DocumentProcessingService:
                 "document_type": (
                     classification["document_type"]
                 ),
-                "parent_chunks": len(
-                    chunks.get("parent_chunks", [])
+                "semantic_chunks": len(
+                    semantic_chunks
                 ),
-                "child_chunks": len(
-                    chunks.get("child_chunks", [])
+                "structured_chunks": len(
+                    structured_chunks
+                ),
+                "total_chunks": len(
+                    all_chunks
                 ),
                 "table_pages": len(
                     table_result.get("pages", [])

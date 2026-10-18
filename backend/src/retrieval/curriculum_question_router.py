@@ -25,6 +25,25 @@ class CurriculumQuestionRouter:
         "practical hours",
     )
 
+    CURRICULUM_PATTERNS = (
+        r"\bwhat\s+(?:courses|subjects)\b",
+        r"\bwhich\s+(?:courses|subjects)\b",
+        r"\bwhat\s+do\s+(?:i|we|students|they)\s+study\b",
+        r"\bwhat\s+(?:is|are)\s+(?:taught|offered)\b",
+        r"\bwhat\s+(?:is|are)\s+in\s+(?:the\s+)?(?:first|second|third|final|fourth|\d+(?:st|nd|rd|th)?)\s+year\b",
+        r"\bwhat\s+(?:is|are)\s+in\s+(?:the\s+)?(?:first|second|third|fourth|\d+(?:st|nd|rd|th)?)\s+semester\b",
+        r"\b(?:courses|subjects)\s+(?:for|in)\s+(?:the\s+)?(?:first|second|third|final|fourth|\d+(?:st|nd|rd|th)?)\s+(?:year|semester)\b",
+        r"\b(?:courses|subjects)\s+(?:for|in)\s+(?:this|that|the)\s+(?:year|semester)\b",
+        r"\bsyllabus\s+(?:for|of)\b",
+        r"\b(?:course|subject)\s+(?:details|information)\b",
+        r"\b\d+(?:st|nd|rd|th)?\s+semester\b",
+        r"\b(?:first|second|third|fourth|fifth|sixth|seventh|final)\s+semester\b",
+        r"\b(?:first|second|third|fourth|final)\s+year\b",
+        r"\b\d+(?:st|nd|rd|th)?\s+year\b",
+        r"\b(?:this|that|the)\s+semester\b",
+        r"\b(?:this|that|the)\s+year\b",
+    )
+
     YEAR_PATTERNS = (
         (
             "FIRST YEAR",
@@ -134,9 +153,20 @@ class CurriculumQuestionRouter:
         self,
         normalized: str,
     ) -> bool:
+        for term in self.CURRICULUM_TERMS:
+
+            if re.search(
+                rf"(?<!\w){re.escape(term)}(?!\w)",
+                normalized,
+            ):
+                return True
+
         return any(
-            term in normalized
-            for term in self.CURRICULUM_TERMS
+            re.search(
+                pattern,
+                normalized,
+            )
+            for pattern in self.CURRICULUM_PATTERNS
         )
 
     def _match_study_year(
@@ -192,6 +222,7 @@ class CurriculumQuestionRouter:
                 "sixth": 6,
                 "seventh": 7,
                 "eighth": 8,
+                "final": 8,
                 "ninth": 9,
                 "tenth": 10,
             }

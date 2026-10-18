@@ -14,43 +14,26 @@ class SeatDistributionRouter:
     """
 
     SEAT_TERMS = (
+        "seats"
         "seat distribution",
         "distribution of seats",
         "seat allocation",
+        "seats are available",
         "seats available",
         "available seats",
         "number of seats",
         "how many seats",
         "total seats",
-        "regular seats",
-        "self finance seats",
-        "self-finance seats",
-        "seat arrangement",
-        "seat matrix",
-        "seat breakup",
-
-        # general seat queries
-        "seats for"
-        "seat of"
-        "available seats",
-        "seats available",
-        "number of seats",
-        "how many seats",
-        "total seats",
-
-        # category queries
-        "seat category",
-        "seat categories",
-        "category",
-        "categories",
-
-        # regular/self finance
         "regular seats",
         "regular seat",
         "self finance seats",
         "self finance seat",
         "self-finance seats",
         "self-finance seat",
+        "seat arrangement",
+        "seat matrix",
+        "seat breakup",
+        "admission category distribution",
     )
 
     SELF_FINANCE_TERMS = (
@@ -106,14 +89,6 @@ class SeatDistributionRouter:
         target_types = self._target_types(
             normalized
         )
-
-        if (
-            "category" in normalized
-            or "categories" in normalized
-        ):
-            target_types.add(
-                "seat_category_description"
-            )
 
         matched_sections = [
             section

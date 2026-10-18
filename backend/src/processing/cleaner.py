@@ -10,14 +10,28 @@ class DocumentCleaner:
     Cleans the raw parsed document produced by the parser.
     """
 
-    def clean(self, parsed_json: Path) -> dict:
+    def __init__(
+        self,
+        debug_dir: Path | None = None,
+    ) -> None:
+        self.debug_dir = debug_dir
+
+    # def clean(self, parsed_json: Path) -> dict:
+    def clean(
+        self,
+        parsed_json: Path,
+        output_path: Path | None = None,
+    ) -> dict:
 
         with open(parsed_json, "r", encoding="utf-8") as f:
             document = json.load(f)
 
         cleaned_pages = []
         table_parser = TableParser()
-        reading_order = ReadingOrderRepairService()
+        # reading_order = ReadingOrderRepairService()
+        reading_order = ReadingOrderRepairService(
+            debug_dir=self.debug_dir,
+        )
 
         for page in document["pages"]:
 
@@ -174,13 +188,20 @@ class DocumentCleaner:
             "metadata": document["metadata"],
         }
 
-        output_path = (
-            Path(__file__).resolve()
-            .parents[3]
-            / "storage"
-            / "cleaned"
-            / f"{parsed_json.stem}.json"
-        )
+        # output_path = (
+        #     Path(__file__).resolve()
+        #     .parents[3]
+        #     / "storage"
+        #     / "cleaned"
+        #     / f"{parsed_json.stem}.json"
+        # )
+        if output_path is None:
+            output_path = (
+                Path(__file__).resolve().parents[3]
+                / "storage"
+                / "cleaned"
+                / f"{parsed_json.stem}.json"
+            )
 
         output_path.parent.mkdir(
             parents=True,

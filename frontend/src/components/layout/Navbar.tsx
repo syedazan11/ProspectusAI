@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import nedLogo from "../../assets/LOGONEDUET2LOGO_1.webp";
@@ -8,12 +7,6 @@ export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    setCollapsed(false);
-  }, []);
-
   const isAdminArea = location.pathname.startsWith("/admin");
 
   function handleLogout() {
@@ -21,29 +14,23 @@ export function Navbar() {
     navigate("/admin/login");
   }
 
-  return (
+    return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-md">
-      <div className="mx-auto max-w-7xl px-4">
-
-        {/* Logo */}
-{!collapsed && (
-  <div className="flex justify-center py-3">
-    <img
-      src={nedLogo}
-      alt="NED University"
-      className="h-20 w-auto"
-    />
-  </div>
-)}
+      <div className="relative flex h-20 w-full items-center px-6">
+        {/* NED Logo */}
+        <Link
+          to="/chat"
+          className="flex items-center"
+        >
+          <img
+            src={nedLogo}
+            alt="NED University"
+            className="h-21 w-auto"
+          />
+        </Link>
 
         {/* Navigation */}
-        <div
-          className={`flex items-center justify-center gap-4 transition-all duration-300 ${
-            collapsed
-              ? "py-2"
-              : "border-t border-slate-200 py-3"
-          }`}
-        >
+        <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-4">
           <Link
             to="/chat"
             className={`rounded-full px-5 py-2 font-medium transition ${
@@ -88,6 +75,7 @@ export function Navbar() {
             </Link>
           )}
         </div>
+
       </div>
     </header>
   );

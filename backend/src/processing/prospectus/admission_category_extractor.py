@@ -3,12 +3,7 @@ from collections import defaultdict
 from src.processing.prospectus.admission_category_record import (
     AdmissionCategoryRecord,
 )
-from dataclasses import dataclass
 
-
-@dataclass(slots=True)
-class CategoryBlock:
-    items: list[dict]
 
 class AdmissionCategoryExtractor:
 
@@ -29,346 +24,148 @@ class AdmissionCategoryExtractor:
         re.IGNORECASE | re.VERBOSE,
     )
 
-    # def _ordered_lines_from_layout(
-    #     self,
-    #     layout_items,
-    # ) -> list[str]:
-    #     """
-    #     Reconstruct reading order from OCR layout.
-
-    #     Items are grouped into horizontal rows using their
-    #     vertical position. Each row is then read left-to-right.
-    #     """
-
-    #     if not layout_items:
-    #         return []
-
-    #     items = [
-    #         item
-    #         for item in layout_items
-    #         if item.get("text", "").strip()
-    #     ]
-
-    #     if not items:
-    #         return []
-
-    #     ROW_THRESHOLD = 12
-
-    #     row_anchors: list[float] = []
-    #     rows: dict[float, list[dict]] = defaultdict(list)
-    # # Group nearby TOP coordinates into one logical row.
-    
-    #     for item in sorted(items, key=lambda i: i["top"]):
-
-    #         top = item["top"]
-
-    #         matched = False
-
-    #         for anchor in row_anchors:
-
-    #             if abs(anchor - top) <= ROW_THRESHOLD:
-    #                 rows[anchor].append(item)
-    #                 matched = True
-    #                 break
-
-    #         if not matched:
-    #             row_anchors.append(top)
-    #             rows[top].append(item)
-
-    #     ordered_lines: list[str] = []
-    # # Read rows from top to bottom.
-    # # Within each row read left to right.
-    #     for anchor in sorted(row_anchors):
-
-    #         row = sorted(
-    #             rows[anchor],
-    #             key=lambda item: item["x"],
-    #         )
-
-    #         for item in row:
-
-    #             text = item["text"].strip()
-
-    #             if text:
-    #                 ordered_lines.append(text)
-
-    #     return ordered_lines
-    def _category_items(
-        self,
-        layout_items,
-    ) -> list[dict]:
-        """
-        Return all OCR layout items that represent
-        admission category codes (R-1(a), SF-2, etc.).
-        """
-        codes = []
-
-        for item in layout_items:
-
-            text = (
-                item.get("text", "")
-                .replace(" ", "")
-                .replace("—", "-")
-                .replace("–", "-")
-                .replace("−", "-")
-                .strip()
-            )
-
-            text = re.sub(
-                r"[,:;]$",
-                "",
-                text,
-            )
-
-            match = self.CATEGORY_PATTERN.fullmatch(text)
-
-            if match:
-                item = dict(item)
-                item["text"] = text
-                codes.append(item)
-
-        return sorted(
-            codes,
-            key=lambda item: (
-                item["top"],
-                item["x"],
-            ),
+    CODE_PATTERN = re.compile(
+        r"""
+        ^
+        (?P<code>
+            (?:R|SF)
+            \s*-\s*
+            \d+
+            (?:\([a-z]\))?
         )
-    
-    def _split_columns(
-        self,
-        layout_items: list[dict],
-    ) -> tuple[list[dict], list[dict]]:
+        \s+
+        (?P<description>[A-Z].+)
+        $
+        """,
+        re.I | re.X,
+    )
 
-        left = []
-        right = []
+    NOISE_PATTERNS = (
 
-        for item in layout_items:
+        re.compile(r"^PROSPECTUS", re.I),
 
-            if item["x"] < 400:
-                left.append(item)
-            else:
-                right.append(item)
+        re.compile(r"^UNDERGRADUATE$", re.I),
 
-        left.sort(
-            key=lambda item: (
-                item["top"],
-                item["x"],
-            )
+        re.compile(r"^NED UNIVERSITY", re.I),
+
+        re.compile(r"^OF ENGINEERING", re.I),
+
+        re.compile(r"^KARACHI$", re.I),
+
+        re.compile(r"^CARACHI$", re.I),
+
+        re.compile(r"^www\.", re.I),
+
+        re.compile(r"^NEDUETOfficial$", re.I),
+
+        re.compile(
+            r"^\d+\s*(?:_?\s*www\.neduet\.edu\.pk)?$",
+            re.I,
         )
+    )
 
-        right.sort(
-            key=lambda item: (
-                item["top"],
-                item["x"],
-            )
-        )
+    STOP_PATTERN = re.compile(
+        r"""
+        ^
+        \d+\.\d+
+        \s*
+        \(
+            [ivxIVX]+
+        \)
+        """,
+        re.X,
+    )
 
-        return left, right
-    
-    def _build_category_blocks(
-        self,
-        column_items: list[dict],
-    ) -> list[CategoryBlock]:
 
-        blocks: list[CategoryBlock] = []
-
-        current: list[dict] = []
-
-        previous_bottom = None
-        previous_height = None
-
-        category_items = self._category_items(column_items)
-
-        category_keys = {
-            (
-                item["top"],
-                item["x"],
-            )
-
-            for item in category_items
-        }
-
-        for item in column_items:
-
-            is_category = (
-                item["top"],
-                item["x"],
-            ) in category_keys
-
-            top = item.get("top")
-            bottom = item.get("bottom")
-            height = item.get("height")
-
-            split = False
-    # Rule 1: large visual gap
-            if (
-                previous_bottom is not None
-                and top is not None
-                and previous_height is not None
-            ):
-
-                gap = top - previous_bottom
-
-                if gap > previous_height * 1.5:
-                    split = True
-    # Rule 2: new category code
-            if is_category and current:
-                split = True
-
-            if split:
-
-                blocks.append(
-                    CategoryBlock(
-                        items=current,
-                    )
-                )
-
-                current = []
-
-            current.append(item)
-
-            previous_bottom = bottom
-            previous_height = height
-
-        if current:
-
-            blocks.append(
-                CategoryBlock(
-                    items=current,
-                )
-            )
-
-        return blocks
-
-    def _extract_column_records(
+    def _extract_from_text(
         self,
         *,
-        column_items: list[dict],
+        text: str,
         page_number: int,
-        heading: str,
     ) -> list[AdmissionCategoryRecord]:
 
-        records: list[AdmissionCategoryRecord] = []
+        records = []
 
-        blocks = self._build_category_blocks(
-            column_items,
-        )
+        current_code = None
+        current_page = None
+        description_parts = []
 
-        for block in blocks:
+        def flush():
 
-            code = None
+            nonlocal current_code
+            nonlocal current_page
+            nonlocal description_parts
 
-            source_lines: list[str] = []
-            description_lines: list[str] = []
+            if current_code is None:
+                return
 
-            for item in block.items:
-
-                text = item.get(
-                    "text",
-                    "",
-                ).strip()
-
-                if not text:
-                    continue
-
-                normalized = (
-                    text.replace(" ", "")
-                        .replace("—", "-")
-                        .replace("–", "-")
-                        .replace("−", "-")
-                        .strip()
-                )
-
-                normalized = re.sub(
-                    r"[,.;:]$",
-                    "",
-                    normalized,
-                )
-
-                if (
-                    code in (None, "__PLACEHOLDER__")
-                    and self.CATEGORY_PATTERN.match(normalized)
-                ):
-                    code = normalized
-                    source_lines.append(text)
-                    continue
-
-                # Missing category marker:
-                # OCR sometimes drops R-1(f), R-2(c), etc.
-                # If a new paragraph begins after a completed sentence,
-                # finish the previous record and start a placeholder record.
-                m = re.match(
-                    r"(R|SF)-(\d+)\(([a-z])\)",
-                    code or "",
-                    re.I,
-                )
-
-                allow_placeholder = (
-                    m is not None
-                    and m.group(3).lower() in {"b", "e", "h"}
-                )
-                if (
-                    allow_placeholder
-                    and description_lines
-                    and description_lines[-1].rstrip().endswith(".")
-                    and text.startswith("Candidates")
-                ):
-
-                    records.append(
-                        AdmissionCategoryRecord(
-                            code=code,
-                            scheme=None,
-                            description=" ".join(description_lines).strip(),
-                            source_page=page_number,
-                            source_heading=heading,
-                            source_text="\n".join(source_lines),
-                        )
-                    )
-
-
-                    # Keep collecting the placeholder record.
-
-                    code = "__PLACEHOLDER__"
-
-                    source_lines = [text]
-                    description_lines = [text]
-
-                    continue
-
-                source_lines.append(text)
-                description_lines.append(text)
-
-            if code is None:
-                continue
-
-            if code == "__PLACEHOLDER__":
-                records.append(
-                    AdmissionCategoryRecord(
-                        code=None,
-                        scheme=None,
-                        description=" ".join(description_lines).strip(),
-                        source_page=page_number,
-                        source_heading=heading,
-                        source_text="\n".join(source_lines),
-                    )
-                )
-                continue
+            scheme = (
+                "Regular"
+                if current_code.startswith("R-")
+                else "Self Finance"
+            )
 
             records.append(
                 AdmissionCategoryRecord(
-                    code=code,
-                    scheme=None,
+                    code=current_code,
+                    scheme=scheme,
                     description=" ".join(
-                        description_lines
+                        description_parts
                     ).strip(),
-                    source_page=page_number,
-                    source_heading=heading,
-                    source_text="\n".join(
-                        source_lines
-                    ),
+                    source_page=current_page,
                 )
             )
+
+            current_code = None
+            current_page = None
+            description_parts = []
+
+        for raw_line in text.splitlines():
+
+            line = raw_line.strip()
+
+            if not line:
+                continue
+
+            # Skip OCR/page noise
+            if any(
+                pattern.match(line)
+                for pattern in self.NOISE_PATTERNS
+            ):
+                continue
+
+            if self.STOP_PATTERN.match(line):
+
+                flush()
+
+                continue
+            
+            match = self.CODE_PATTERN.match(line)
+            
+            if match:
+            
+                flush()
+
+            
+                current_code = (
+                    match.group("code")
+                    .replace(" ", "")
+                    .upper()
+                )
+            
+                current_page = page_number
+            
+                description_parts = [
+                    match.group("description").strip()
+                ]
+            
+                continue
+            
+            if current_code is not None:
+            
+                description_parts.append(line)
+
+        flush()
 
         return records
     
@@ -427,14 +224,20 @@ class AdmissionCategoryExtractor:
                     
                     repaired.append(current)
 
+                    new_code = (
+                        f"{m1.group(1)}-{m1.group(2)}({expected})"
+                    )
+
                     repaired.append(
                         AdmissionCategoryRecord(
-                            code=f"{m1.group(1)}-{m1.group(2)}({expected})",
-                            scheme=None,
+                            code=new_code,
+                            scheme=(
+                                "Regular"
+                                if new_code.startswith("R-")
+                                else "Self Finance"
+                            ),
                             description=records[i + 1].description,
                             source_page=records[i + 1].source_page,
-                            source_heading=records[i + 1].source_heading,
-                            source_text=records[i + 1].source_text,
                         )
                     )
 
@@ -468,14 +271,20 @@ class AdmissionCategoryExtractor:
 
                     repaired.append(current)
 
+                    new_code = (
+                        f"{m2.group(1)}-{m2.group(2)}(a)"
+                    )
+
                     repaired.append(
                         AdmissionCategoryRecord(
-                            code=f"{m2.group(1)}-{m2.group(2)}(a)",
-                            scheme=None,
+                            code=new_code,
+                            scheme=(
+                                "Regular"
+                                if new_code.startswith("R-")
+                                else "Self Finance"
+                            ),
                             description=records[i + 1].description,
                             source_page=records[i + 1].source_page,
-                            source_heading=records[i + 1].source_heading,
-                            source_text=records[i + 1].source_text,
                         )
                     )
 
@@ -491,87 +300,31 @@ class AdmissionCategoryExtractor:
     
     def extract(
         self,
-        pages: list[dict],
+        *,
+        layout_document: dict,
+        pages: set[int],
     ) -> list[AdmissionCategoryRecord]:
 
         records: list[AdmissionCategoryRecord] = []
 
-        for page in pages:
+        for page in layout_document:
+
+            if page["page_number"] not in pages:
+                continue
 
             page_number = page["page_number"]
 
-            for section in page.get(
-                "sections",
-                [],
-            ):
+            text = page.get(
+                "reconstructed_text",
+                "",
+            )
 
-                heading = (
-                    section.get(
-                        "heading",
-                        "",
-                    ).strip()
+            records.extend(
+                self._extract_from_text(
+                    text=text,
+                    page_number=page_number,
                 )
-
-                records.extend(
-                    self._extract_section(
-                        section=section,
-                        page_number=page_number,
-                        heading=heading,
-                    )
-                )
-
-        return self._repair_missing_codes(records)
-    
-    def _extract_section(
-        self,
-        *,
-        section: dict,
-        page_number: int,
-        heading: str,
-    ) -> list[AdmissionCategoryRecord]:
-
-        records: list[AdmissionCategoryRecord] = []
-
-        current_code: str | None = None
-        current_description: list[str] = []
-        current_source: list[str] = []
-
-        layout_items = section.get(
-            "layout_items",
-            [],
-        )
-
-        if layout_items:
-
-            print(
-                f"\nPAGE {page_number}"
             )
-            print(
-                f"SECTION: {heading}"
-            )
-        print(
-            "layout items:",
-            len(layout_items),
-        )
 
-        left_items, right_items = self._split_columns(
-            layout_items,
-        )
-
-        records.extend(
-            self._extract_column_records(
-                column_items=left_items,
-                page_number=page_number,
-                heading=heading,
-            )
-        )
-
-        records.extend(
-            self._extract_column_records(
-                column_items=right_items,
-                page_number=page_number,
-                heading=heading,
-            )
-        )
-
+        # return self._repair_missing_codes(records)
         return records

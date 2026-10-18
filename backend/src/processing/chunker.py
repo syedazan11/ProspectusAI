@@ -2,11 +2,11 @@ import json
 import re
 from pathlib import Path
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from src.schemas.chunk import (
-    ParentChunk,
-    ChildChunk,
-)
+# from langchain_text_splitters import RecursiveCharacterTextSplitter
+# from src.schemas.chunk import (
+#     ParentChunk,
+#     ChildChunk,
+# )
 from src.processing.structured_chunk_builder import (
     StructuredChunkBuilder,
 )
@@ -21,6 +21,8 @@ class DocumentChunker:
         self,
         cleaned_json: Path,
         *,
+        semantic_chunk_path: Path,
+        output_path: Path | None = None,
         exclude_pages: set[int] | None = None,
         structured_records: dict | None = None,
     ):
@@ -30,203 +32,242 @@ class DocumentChunker:
         with open(cleaned_json, "r", encoding="utf-8") as f:
             document = json.load(f)
 
-        parent_chunks: list[ParentChunk] = []
-        child_chunks: list[ChildChunk] = []
+        # semantic_chunk_path = (
+        #     Path(__file__).resolve().parents[3]
+        #     / "storage"
+        #     / "experiments"
+        #     / "semantic_chunks.json"
+        # )
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=800,
-            chunk_overlap=150,
-            separators=[
-                "\n\n",
-                "\n",
-                ". ",
-                " ",
-                "",
-            ],
-        )
+        with open(
+            semantic_chunk_path,
+            "r",
+            encoding="utf-8",
+        ) as f:
+            semantic_chunks = json.load(f)
 
-        chunk_counter = 1
+        # parent_chunks: list[ParentChunk] = []
+        # child_chunks: list[ChildChunk] = []
 
-        for page in document["pages"]:
+        # text_splitter = RecursiveCharacterTextSplitter(
+        #     chunk_size=800,
+        #     chunk_overlap=150,
+        #     separators=[
+        #         "\n\n",
+        #         "\n",
+        #         ". ",
+        #         " ",
+        #         "",
+        #     ],
+        # )
 
-            if page["page_number"] in exclude_pages:
-                continue
+        # chunk_counter = 1
 
-            valid_sections = []
 
-            for section in page.get("sections", []):
+        # for page in document["pages"]:
 
-                heading = section.get(
-                    "heading",
-                    "",
-                ).strip()
+        #     if page["page_number"] in exclude_pages:
+        #         continue
 
-                content = "\n".join(
-                    section.get("content", [])
-                ).strip()
+        #     valid_sections = []
 
-                letters = len(
-                    re.findall(
-                        r"[A-Za-z]",
-                        heading,
-                    )
-                )
+        #     for section in page.get("sections", []):
 
-                if (
-                    len(heading.split()) < 2
-                    or "??" in heading
-                    or letters < 8
-                    or len(content.split()) < 20
-                    or len(content) < 30
-                ):
-                    continue
+        #         heading = section.get(
+        #             "heading",
+        #             "",
+        #         ).strip()
 
-                valid_sections.append(
-                    {
-                        "heading": heading,
-                        "heading_number": section.get(
-                            "heading_number",
-                            "",
-                        ),
-                        "heading_level": section.get(
-                            "heading_level",
-                            0,
-                        ),
-                        "heading_title": section.get(
-                            "heading_title",
-                            heading,
-                        ),
-                        "content": content,
-                        "metadata": dict(
-                            section.get(
-                                "metadata",
-                                {},
-                            )
-                            or {}
-                        ),
-                    }
-                )
+        #         content = "\n".join(
+        #             section.get("content", [])
+        #         ).strip()
 
-            if not valid_sections:
+        #         letters = len(
+        #             re.findall(
+        #                 r"[A-Za-z]",
+        #                 heading,
+        #             )
+        #         )
 
-                fallback_text = page.get(
-                    "text",
-                    "",
-                ).strip()
+        #         if (
+        #             len(heading.split()) < 2
+        #             or "??" in heading
+        #             or letters < 8
+        #             or len(content.split()) < 20
+        #             or len(content) < 30
+        #         ):
+        #             continue
 
-                if len(fallback_text.split()) >= 20:
-                    valid_sections.append(
-                        {
-                            "heading": (
-                                f"Page {page['page_number']}"
-                            ),
-                            "content": fallback_text,
-                        }
-                    )
+        #         valid_sections.append(
+        #             {
+        #                 "heading": heading,
+        #                 "heading_number": section.get(
+        #                     "heading_number",
+        #                     "",
+        #                 ),
+        #                 "heading_level": section.get(
+        #                     "heading_level",
+        #                     0,
+        #                 ),
+        #                 "heading_title": section.get(
+        #                     "heading_title",
+        #                     heading,
+        #                 ),
+        #                 "content": content,
+        #                 "metadata": dict(
+        #                     section.get(
+        #                         "metadata",
+        #                         {},
+        #                     )
+        #                     or {}
+        #                 ),
+        #             }
+        #         )
 
-            for section in valid_sections:
+        #     if not valid_sections:
 
-                heading = section["heading"]
-                content = section["content"]
+        #         fallback_text = page.get(
+        #             "text",
+        #             "",
+        #         ).strip()
 
-                parent_id = f"parent_{chunk_counter}"
+        #         if len(fallback_text.split()) >= 20:
+        #             valid_sections.append(
+        #                 {
+        #                     "heading": (
+        #                         f"Page {page['page_number']}"
+        #                     ),
+        #                     "content": fallback_text,
+        #                 }
+        #             )
 
-                parent_chunks.append(
-                    ParentChunk(
-                        chunk_id=parent_id,
-                        heading=heading,
-                        heading_number=section.get(
-                            "heading_number",
-                            "",
-                        ),
-                        heading_level=section.get(
-                            "heading_level",
-                            0,
-                        ),
-                        heading_title=section.get(
-                            "heading_title",
-                            heading,
-                        ),
-                        page_number=page["page_number"],
-                        content=content,
-                       metadata={
-                           "document": (
-                               document["metadata"]["filename"]
-                           ),
-                           "page": (
-                               page["page_number"]
-                           ),
-                           **section.get(
-                               "metadata",
-                               {},
-                           ),
-                       },
-                    )
-                )
+        #     for section in valid_sections:
 
-                full_text = f"{heading}\n\n{content}"
+        #         heading = section["heading"]
+        #         content = section["content"]
 
-                split_chunks = (
-                    text_splitter.split_text(
-                        full_text
-                    )
-                )
+        #         parent_id = f"parent_{chunk_counter}"
 
-                filtered_chunks = []
+        #         parent_chunks.append(
+        #             ParentChunk(
+        #                 chunk_id=parent_id,
+        #                 heading=heading,
+        #                 heading_number=section.get(
+        #                     "heading_number",
+        #                     "",
+        #                 ),
+        #                 heading_level=section.get(
+        #                     "heading_level",
+        #                     0,
+        #                 ),
+        #                 heading_title=section.get(
+        #                     "heading_title",
+        #                     heading,
+        #                 ),
+        #                 page_number=page["page_number"],
+        #                 content=content,
+        #                metadata={
+        #                    "document": (
+        #                        document["metadata"]["filename"]
+        #                    ),
+        #                    "page": (
+        #                        page["page_number"]
+        #                    ),
+        #                    **section.get(
+        #                        "metadata",
+        #                        {},
+        #                    ),
+        #                },
+        #             )
+        #         )
 
-                for chunk in split_chunks:
+        #         full_text = f"{heading}\n\n{content}"
 
-                    if len(chunk.split()) < 15:
-                        continue
+        #         split_chunks = (
+        #             text_splitter.split_text(
+        #                 full_text
+        #             )
+        #         )
 
-                    filtered_chunks.append(chunk)
+        #         filtered_chunks = []
 
-                for i, chunk_text in enumerate(
-                    filtered_chunks,
-                    start=1,
-                ):
+        #         for chunk in split_chunks:
 
-                    child_chunks.append(
-                        ChildChunk(
-                            chunk_id=(
-                                f"{parent_id}_child_{i}"
-                            ),
-                            parent_chunk_id=parent_id,
-                            page_number=(
-                                page["page_number"]
-                            ),
-                            heading=heading,
-                            heading_number=section.get(
-                                "heading_number",
-                                "",
-                            ),
-                            heading_level=section.get(
-                                "heading_level",
-                                0,
-                            ),
-                            heading_title=section.get(
-                                "heading_title",
-                                heading,
-                            ),
-                            content=chunk_text,
-                            metadata={
-                                "document": (
-                                    document["metadata"]["filename"]
-                                ),
-                                "page": (
-                                    page["page_number"]
-                                ),
-                                "parent": parent_id,
-                                **section.get(
-                                    "metadata",
-                                    {},
-                                ),
-                            },
-                        )
-                    )
+        #             if len(chunk.split()) < 15:
+        #                 continue
 
-                chunk_counter += 1
+        #             filtered_chunks.append(chunk)
+
+        #         for i, chunk_text in enumerate(
+        #             filtered_chunks,
+        #             start=1,
+        #         ):
+
+        #             child_chunks.append(
+        #                 ChildChunk(
+        #                     chunk_id=(
+        #                         f"{parent_id}_child_{i}"
+        #                     ),
+        #                     parent_chunk_id=parent_id,
+        #                     page_number=(
+        #                         page["page_number"]
+        #                     ),
+        #                     heading=heading,
+        #                     heading_number=section.get(
+        #                         "heading_number",
+        #                         "",
+        #                     ),
+        #                     heading_level=section.get(
+        #                         "heading_level",
+        #                         0,
+        #                     ),
+        #                     heading_title=section.get(
+        #                         "heading_title",
+        #                         heading,
+        #                     ),
+        #                     content=chunk_text,
+        #                     metadata={
+        #                         "document": (
+        #                             document["metadata"]["filename"]
+        #                         ),
+        #                         "page": (
+        #                             page["page_number"]
+        #                         ),
+        #                         "parent": parent_id,
+        #                         **section.get(
+        #                             "metadata",
+        #                             {},
+        #                         ),
+        #                     },
+        #                 )
+        #             )
+
+        #         chunk_counter += 1
         
+        # if structured_records:
+
+        #     structured = (
+        #         StructuredChunkBuilder().build(
+        #             record_results=structured_records,
+        #         )
+        #     )
+
+        #     parent_chunks.extend(
+        #         structured["parent_chunks"]
+        #     )
+
+        #     child_chunks.extend(
+        #         structured["child_chunks"]
+        #     )
+
+        #     print(
+        #         "[STRUCTURED CHUNKS] "
+        #         f"Parent={len(structured['parent_chunks'])} "
+        #         f"Child={len(structured['child_chunks'])}"
+        #     )
+
+        all_chunks = list(semantic_chunks)
+
         if structured_records:
 
             structured = (
@@ -235,37 +276,42 @@ class DocumentChunker:
                 )
             )
 
-            parent_chunks.extend(
-                structured["parent_chunks"]
-            )
-
-            child_chunks.extend(
-                structured["child_chunks"]
+            all_chunks.extend(
+                structured["chunks"]
             )
 
             print(
                 "[STRUCTURED CHUNKS] "
-                f"Parent={len(structured['parent_chunks'])} "
-                f"Child={len(structured['child_chunks'])}"
+                f"{len(structured['chunks'])}"
             )
 
+        # output = {
+        #     "parent_chunks": [
+        #         chunk.model_dump()
+        #         for chunk in parent_chunks
+        #     ],
+        #     "child_chunks": [
+        #         chunk.model_dump()
+        #         for chunk in child_chunks
+        #     ],
+        # }
         output = {
-            "parent_chunks": [
-                chunk.model_dump()
-                for chunk in parent_chunks
-            ],
-            "child_chunks": [
-                chunk.model_dump()
-                for chunk in child_chunks
-            ],
+            "chunks": all_chunks,
         }
 
-        output_path = (
+        # output_path = (
+        #     Path(__file__).resolve().parents[3]
+        #     / "storage"
+        #     / "chunks"
+        #     / f"{cleaned_json.stem}.json"
+        # )
+        if output_path is None:
+            output_path = (
             Path(__file__).resolve().parents[3]
-            / "storage"
-            / "chunks"
-            / f"{cleaned_json.stem}.json"
-        )
+                / "storage"
+                / "chunks"
+                / f"{cleaned_json.stem}.json"
+            )
 
         output_path.parent.mkdir(
             parents=True,
@@ -281,6 +327,18 @@ class DocumentChunker:
             )
 
         print(f"Saved chunks -> {output_path}")
-        print(f"Parent Chunks: {len(parent_chunks)}")
-        print(f"Child Chunks: {len(child_chunks)}")
+
+        print(
+            f"Semantic Chunks: {len(semantic_chunks)}"
+        )
+
+        if structured_records:
+            print(
+                f"Structured Chunks: {len(structured['chunks'])}"
+            )
+
+        print(
+            f"Total Chunks: {len(all_chunks)}"
+        )
+
         return output

@@ -38,15 +38,15 @@ class Indexer:
         ) as file:
             document = json.load(file)
 
-        chunks = document["child_chunks"]
+        chunks = document["chunks"]
 
         print(
-            f"Found {len(chunks)} child chunks."
+            f"Found {len(chunks)} chunks."
         )
 
         if not chunks:
             raise ValueError(
-                "No child chunks available to index."
+                "No chunks available to index."
             )
 
         self.vector_store.create_collection()
@@ -66,7 +66,10 @@ class Indexer:
             ]
 
             texts = [
-                chunk["content"]
+                chunk.get(
+                    "embedding_text",
+                    chunk["content"],
+                )
                 for chunk in batch
             ]
 
@@ -85,36 +88,13 @@ class Indexer:
                         id=str(uuid.uuid4()),
                         vector=vector.tolist(),
                         payload={
+                            **chunk.get("metadata", {}),
                             "document": document_id,
-                            "content_type": (
-                                "prospectus_chunk"
-                            ),
-                            "page_number": (
-                                chunk["page_number"]
-                            ),
-                            "heading": (
-                                chunk.get("heading")
-                            ),
-                            "heading_number": (
-                                chunk.get("heading_number")
-                            ),
-                            "heading_level": (
-                                chunk.get("heading_level")
-                            ),
-                            "heading_title": (
-                                chunk.get("heading_title")
-                            ),
-                            "chunk_id": (
-                                chunk["chunk_id"]
-                            ),
-                            "parent_chunk_id": (
-                                chunk.get(
-                                    "parent_chunk_id"
-                                )
-                            ),
-                            "content": (
-                                chunk["content"]
-                            ),
+                            "content_type": "prospectus_chunk",
+                            "chunk_id": chunk["chunk_id"],
+                            "chunk_type": chunk.get("chunk_type", "semantic"),
+                            "content": chunk["content"],
+                            # **chunk.get("metadata", {}),
                         },
                     )
                 )

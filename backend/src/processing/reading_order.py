@@ -71,6 +71,12 @@ class ReadingOrderRepairService:
         re.IGNORECASE,
     )
 
+    def __init__(
+        self,
+        debug_dir: Path | None = None,
+    ) -> None:
+        self.debug_dir = debug_dir
+
     def classify(self, line: str) -> ClassifiedLine:
 
         text = line.strip()
@@ -193,11 +199,19 @@ class ReadingOrderRepairService:
         analysis: dict,
     ) -> None:
 
-        debug_dir = (
-            Path(__file__).resolve().parents[2]
-            / "storage"
-            / "debug"
-        )
+        # debug_dir = (
+        #     Path(__file__).resolve().parents[2]
+        #     / "storage"
+        #     / "debug"
+        # )
+        if self.debug_dir is None:
+            self.debug_dir = (
+                Path(__file__).resolve().parents[2]
+                / "storage"
+                / "debug"
+            )
+
+        debug_dir = self.debug_dir
 
         debug_dir.mkdir(
             parents=True,

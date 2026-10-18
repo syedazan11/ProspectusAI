@@ -1,7 +1,7 @@
 const EXAMPLES = [
-  "How many Computer Science seats are available in SF-1(a)?",
+  "Can you tell me about the Seat Distribution?",
   "What is the eligibility criteria for admission?",
-  "What are the tuition fees for the Engineering programme?",
+  "What are the admission fees for the Engineering programme?",
   "Is there a hostel facility for first-year students?",
 ];
 
