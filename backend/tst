@@ -1,0 +1,14 @@
+from src.retrieval.chunk_classifier import ChunkClassifier
+from src.retrieval.retriever import Retriever
+
+retriever = Retriever()
+for chunk in retriever._all_chunks():
+
+    category = ChunkClassifier.classify(chunk)
+
+    if category.name == "TABLE_OF_CONTENTS":
+        print(
+            chunk["chunk_id"],
+            chunk["metadata"].get("page"),
+            category,
+        )

@@ -1,0 +1,10 @@
+PAGE 104
+17: 'for merit- or need-based scholarships, subject to'
+18: 'availability of funds.'
+19: 'ii) Students Facilitation Charges *Rs.10,100/-'
+20: 'iii) Studio Fee (For Architecture'
+21: 'Department only) *Rs. 2,200/-'
+22: 'iv) Bench Fee (For BS Chemistry only) *Rs. 1,800/-'
+23: 'c) If applicable, fee (Tuition and Examination) for one'
+24: 'course *Rs. 8,000/- (*subject to revision).'
+

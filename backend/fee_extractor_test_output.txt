@@ -1,0 +1,559 @@
+TOTAL RECORDS: 29
+
+========== RECORD 1 ==========
+category: Bench Fee (For BS Chemistry only)
+amount: 1800.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: For Main Campus, LEJ and City Campus
+source_text: iv) Bench Fee (For BS Chemistry only) * iv) Bench Fee (For BS Chemistry only) *Rs. 1,800/- /-
+fee_type: Bench Fee (For BS Chemistry only
+applicability: For Main Campus, LEJ and City Campus
+programme_scope: None
+campus: Main Campus, LEJ and City Campus
+student_type: None
+section_number: 8.1.1
+section_heading: For Main Campus, LEJ and City Campus
+
+========== RECORD 2 ==========
+category: course
+amount: 7500.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: subject to revision; If applicable
+source_page: 100
+source_heading: For Main Campus, LEJ and City Campus
+source_text: c) If applicable, fee (Tuition and Examination) for one
+course * course *Rs. 7,500/- (*subject to revision). /- (*subject to revision).
+fee_type: course
+applicability: For Main Campus, LEJ and City Campus
+programme_scope: None
+campus: Main Campus, LEJ and City Campus
+student_type: None
+section_number: 8.1.1
+section_heading: For Main Campus, LEJ and City Campus
+
+========== RECORD 3 ==========
+category: Students Facilitation Charges
+amount: 7500.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: subject to revision; If applicable
+source_page: 100
+source_heading: For Thar Institute of Engineering, Sciences and Technology (TIEST)
+source_text: ii) Students Facilitation Charges
+b) If applicable, fee (Tuition and Examination) for one
+course * course *Rs. 7,500/- (*subject to revision). /- (*subject to revision).
+fee_type: Students Facilitation Charges
+applicability: For Thar Institute of Engineering, Sciences and Technology (TIEST)
+programme_scope: None
+campus: Thar Institute of Engineering, Sciences and Technology (TIEST)
+student_type: None
+section_number: 8.1.2
+section_heading: For Thar Institute of Engineering, Sciences and Technology (TIEST)
+
+========== RECORD 4 ==========
+category: Categories SF-1 to SF-5
+amount: 855000.0
+currency: PKR
+payment_period: None
+scheme: Rs. 51,930/- Categories SF-1 to SF-5
+notes: None
+source_page: 100
+source_heading: CHARGES UNDER SELF-FINANCE SCHEME
+source_text: Rs. 51,930/- Categories SF-1 to SF-5 Rs. 51,930/- Categories SF-1 to SF-5 Rs. 855,000/- /-
+fee_type: Categories SF-1 to SF-5
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.2
+section_heading: CHARGES UNDER SELF-FINANCE SCHEME
+
+========== RECORD 5 ==========
+category: Categories SF-6 to SF-11
+amount: 1065000.0
+currency: PKR
+payment_period: None
+scheme: Rs. 56,390/- Categories SF-6 to SF-11
+notes: None
+source_page: 100
+source_heading: CHARGES UNDER SELF-FINANCE SCHEME
+source_text: Rs. 56,390/- Categories SF-6 to SF-11 Rs. 56,390/- Categories SF-6 to SF-11 Rs. 1,065,000/- /-
+fee_type: Categories SF-6 to SF-11
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.2
+section_heading: CHARGES UNDER SELF-FINANCE SCHEME
+
+========== RECORD 6 ==========
+category: SECURITY DEPOSIT
+amount: 51170.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: SECURITY DEPOSIT
+* *Rs. 51,170/- Security deposit** of Rs.15,500/- is included in the /- Security deposit** of Rs.15,500/- is included in the
+fee_type: SECURITY DEPOSIT
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 7 ==========
+category: SECURITY DEPOSIT
+amount: 15500.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: SECURITY DEPOSIT
+*Rs. 51,170/- Security deposit** of *Rs. 51,170/- Security deposit** of Rs.15,500/- is included in the /- is included in the
+fee_type: SECURITY DEPOSIT
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 8 ==========
+category: admission fee to compensate breakage and or any other
+amount: 56600.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: admission fee to compensate breakage and or any other
+* *Rs. 56,600/- damage, if any, caused by the student. This deposit or /- damage, if any, caused by the student. This deposit or
+fee_type: admission fee to compensate breakage and or any other
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 9 ==========
+category: admission fee to compensate breakage and or any other
+amount: 16295.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: shall be refunded
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: admission fee to compensate breakage and or any other
+such balance as may be available out of it, shall be
+refunded to the student whenever he/she ceases to be
+student of the University.
+** For TIEST ** For TIEST Rs 16,295/- /-
+fee_type: admission fee to compensate breakage and or any other
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 10 ==========
+category: admission fee to compensate breakage and or any other
+amount: 7875.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: shall be refunded
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: admission fee to compensate breakage and or any other
+such balance as may be available out of it, shall be
+refunded to the student whenever he/she ceases to be
+student of the University.
+* *Rs.7,875/- 8.4 MISCELLANEOUS FEE /- 8.4 MISCELLANEOUS FEE
+fee_type: admission fee to compensate breakage and or any other
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 11 ==========
+category: admission fee to compensate breakage and or any other
+amount: 2200.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: shall be refunded
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: admission fee to compensate breakage and or any other
+such balance as may be available out of it, shall be
+refunded to the student whenever he/she ceases to be
+student of the University.
+Document Ordinary Urgent
+* *Rs. 2,200/- a) Mark Certificate Rs. 1,750/- Rs. 3,000/- /- a) Mark Certificate Rs. 1,750/- Rs. 3,000/-
+fee_type: admission fee to compensate breakage and or any other
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 12 ==========
+category: admission fee to compensate breakage and or any other
+amount: 1750.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: shall be refunded
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: admission fee to compensate breakage and or any other
+such balance as may be available out of it, shall be
+refunded to the student whenever he/she ceases to be
+student of the University.
+Document Ordinary Urgent
+*Rs. 2,200/- a) Mark Certificate *Rs. 2,200/- a) Mark Certificate Rs. 1,750/- Rs. 3,000/- /- Rs. 3,000/-
+fee_type: admission fee to compensate breakage and or any other
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 13 ==========
+category: admission fee to compensate breakage and or any other
+amount: 3000.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: shall be refunded
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: admission fee to compensate breakage and or any other
+such balance as may be available out of it, shall be
+refunded to the student whenever he/she ceases to be
+student of the University.
+Document Ordinary Urgent
+*Rs. 2,200/- a) Mark Certificate Rs. 1,750/- *Rs. 2,200/- a) Mark Certificate Rs. 1,750/- Rs. 3,000/- /-
+fee_type: admission fee to compensate breakage and or any other
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 14 ==========
+category: Transcript
+amount: 2000.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: b) Transcript b) Transcript Rs. 2,000/- Rs. 4,500/- /- Rs. 4,500/-
+fee_type: Transcript
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 15 ==========
+category: Transcript
+amount: 4500.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: b) Transcript Rs. 2,000/- b) Transcript Rs. 2,000/- Rs. 4,500/- /-
+fee_type: Transcript
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 16 ==========
+category: Degree
+amount: 3450.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: c) Degree c) Degree Rs. 3,450/- Rs. 6,900/- /- Rs. 6,900/-
+fee_type: Degree
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 17 ==========
+category: Degree
+amount: 6900.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: c) Degree Rs. 3,450/- c) Degree Rs. 3,450/- Rs. 6,900/- /-
+fee_type: Degree
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 18 ==========
+category: Duplicate Degree
+amount: 10350.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: d) Duplicate Degree d) Duplicate Degree Rs.10,350/- Rs.20,700/- /- Rs.20,700/-
+fee_type: Duplicate Degree
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 19 ==========
+category: Duplicate Degree
+amount: 20700.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: d) Duplicate Degree Rs.10,350/- d) Duplicate Degree Rs.10,350/- Rs.20,700/- /-
+fee_type: Duplicate Degree
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 20 ==========
+category: Provisional Certificate
+amount: 4500.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: e) Provisional Certificate e) Provisional Certificate Rs. 4,500/- /-
+fee_type: Provisional Certificate
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 21 ==========
+category: Re-totaling of Answer
+amount: 2500.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: SECURITY DEPOSIT
+source_text: f) Re-totaling of Answer f) Re-totaling of Answer Rs. 2,500/- /-
+fee_type: Re-totaling of Answer
+applicability: None
+programme_scope: None
+campus: TIEST
+student_type: None
+section_number: 8.3
+section_heading: SECURITY DEPOSIT
+
+========== RECORD 22 ==========
+category: HOSTEL CHARGES
+amount: 52770.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: HOSTEL CHARGES
+source_text: HOSTEL CHARGES
+* *Rs. 52,770/- (No boarding will be provided by the University; however, canteen facilities are available. Karachi resident are not eligible) /- (No boarding will be provided by the University; however, canteen facilities are available. Karachi resident are not eligible)
+fee_type: HOSTEL CHARGES
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.5
+section_heading: HOSTEL CHARGES
+
+========== RECORD 23 ==========
+category: (a) Room Rent
+amount: 56600.0
+currency: PKR
+payment_period: per_month
+scheme: None
+notes: None
+source_page: 100
+source_heading: HOSTEL CHARGES
+source_text: (a) Room Rent
+* *Rs.56,600/- i) Cubicle Rs.1,035/- per month /- i) Cubicle Rs.1,035/- per month
+fee_type: a) Room Rent
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.5
+section_heading: HOSTEL CHARGES
+
+========== RECORD 24 ==========
+category: (a) Room Rent
+amount: 1035.0
+currency: PKR
+payment_period: per_month
+scheme: None
+notes: None
+source_page: 100
+source_heading: HOSTEL CHARGES
+source_text: (a) Room Rent
+*Rs.56,600/- i) Cubicle *Rs.56,600/- i) Cubicle Rs.1,035/- per month /- per month
+fee_type: a) Room Rent
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.5
+section_heading: HOSTEL CHARGES
+
+========== RECORD 25 ==========
+category: Dormitory
+amount: 805.0
+currency: PKR
+payment_period: per_month
+scheme: None
+notes: None
+source_page: 100
+source_heading: HOSTEL CHARGES
+source_text: ii) Dormitory ii) Dormitory Rs. 805/- per month /- per month
+fee_type: Dormitory
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.5
+section_heading: HOSTEL CHARGES
+
+========== RECORD 26 ==========
+category: (b) Service Charges
+amount: 1035.0
+currency: PKR
+payment_period: per_month
+scheme: None
+notes: None
+source_page: 100
+source_heading: HOSTEL CHARGES
+source_text: (b) Service Charges (b) Service Charges Rs.1,035/- per month /- per month
+fee_type: b) Service Charges
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.5
+section_heading: HOSTEL CHARGES
+
+========== RECORD 27 ==========
+category: Dormitory
+amount: 7000.0
+currency: PKR
+payment_period: per_month
+scheme: None
+notes: None
+source_page: 100
+source_heading: HOSTEL CHARGES
+source_text: 2. International Hostel:
+Dormitory Dormitory Rs.7,000/- per month /- per month
+fee_type: Dormitory
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.5
+section_heading: HOSTEL CHARGES
+
+========== RECORD 28 ==========
+category: Dormitory
+amount: 11495.0
+currency: PKR
+payment_period: None
+scheme: None
+notes: None
+source_page: 100
+source_heading: HOSTEL CHARGES
+source_text: 2. International Hostel:
+* *Rs.11,495/- 3. New Building: /- 3. New Building:
+fee_type: Dormitory
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.5
+section_heading: HOSTEL CHARGES
+
+========== RECORD 29 ==========
+category: Dormitory
+amount: 3000.0
+currency: PKR
+payment_period: per_month
+scheme: None
+notes: None
+source_page: 100
+source_heading: HOSTEL CHARGES
+source_text: 2. International Hostel:
+Dormitory Dormitory Rs.3,000/- per month /- per month
+fee_type: Dormitory
+applicability: None
+programme_scope: None
+campus: None
+student_type: None
+section_number: 8.5
+section_heading: HOSTEL CHARGES
+

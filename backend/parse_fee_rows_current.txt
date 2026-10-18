@@ -1,0 +1,496 @@
+    def _parse_fee_rows(
+        self,
+        logical_lines: list[str],
+        page_number: int,
+        heading: str,
+        heading_number: str | None,
+        section_heading: str | None = None,
+    ) -> list[FeeRecord]:
+
+        records: list[FeeRecord] = []
+
+        if not logical_lines:
+            return records
+
+        current_context: list[str] = []
+
+        active_category: str | None = None
+        active_scheme: str | None = None
+        active_applicability: str | None = None
+        active_campus = None
+        
+        if section_heading:
+            current_context.append(section_heading)
+
+        if heading and heading != section_heading:
+            current_context.append(heading)
+
+        heading_applicability = self._extract_applicability(
+            heading or section_heading
+        )
+
+        if heading_applicability:
+            active_applicability = heading_applicability
+
+            active_campus = self._extract_campus(
+                heading_applicability
+            )
+
+        for raw_line in logical_lines:
+
+            line = str(raw_line).strip()
+
+            if not line:
+                continue
+
+            amount_matches = list(
+                self.AMOUNT_PATTERN.finditer(
+                    line
+                )
+            )
+
+            if self._is_self_finance_category_line(
+                line
+            ):
+                current_context = []
+
+                active_category = None
+                active_scheme = "Self-Finance"
+                active_applicability = None
+
+            if not amount_matches:
+
+                if FeeRecordExtractor._is_applicability_continuation(
+                    line
+                ):
+                    current_context.append(
+                        line
+                    )
+
+                elif re.match(
+                    r"^\d+(?:\.\d+)+\.?\s+For\b",
+                    line.strip(),
+                    flags=re.IGNORECASE,
+                ):
+                    current_context = [line]
+
+                    active_category = None
+                    active_scheme = None
+                    active_applicability = None
+                    active_campus = None
+
+                elif self._is_new_fee_item_context(
+                    line
+                ):
+                    current_context = [
+                        line
+                    ]
+
+                    active_category = None
+                    active_scheme = None
+                    # active_applicability = None
+
+                else:
+                    current_context.append(
+                        line
+                    )
+
+                continue
+
+            for match in amount_matches:
+
+                amount = self._parse_amount(
+                    match.group("amount")
+                )
+
+                if amount is None:
+                    continue
+
+                before_amount = (
+                    line[:match.start()]
+                    .strip()
+                )
+                label_detection_text = re.sub(
+                    r"Rs\.?\s*[\d,]+(?:\.\d+)?\s*/?-?",
+                    "",
+                    before_amount,
+                    flags=re.IGNORECASE,
+                ).strip()
+
+                
+
+                before_amount_cleaned = (
+                    FeeRecordExtractor
+                    ._clean_structural_prefix(
+                        label_detection_text
+                    )
+                ).strip()
+
+                after_amount = (
+                    line[match.end():]
+                    .strip()
+                )
+
+                structural_item_match = re.match(
+                    r"^(?:"
+                    r"[a-z]\)"
+                    r"|[ivxlcdm]+\)"
+                    r"|\(\s*[a-z]\s*\)"
+                    r"|\(\s*[ivxlcdm]+\s*\)"
+                    r"|\d+\."
+                    r")\s+",
+                    before_amount,
+                    flags=re.IGNORECASE,
+                )
+
+                if structural_item_match:
+                    current_context = []
+                    active_category = None
+                    active_scheme = None
+                    # active_applicability = None
+
+                current_row_has_item_marker = bool(
+                    re.match(
+                        r"^(?:"
+                        r"[a-z]\)"
+                        r"|[ivxlcdm]+\)"
+                        r"|\(\s*[a-z]\s*\)"
+                        r"|\(\s*[ivxlcdm]+\s*\)"
+                        r"|\d+\."
+                        r")\s+",
+                        before_amount,
+                        flags=re.IGNORECASE,
+                    )
+                )
+
+                context_lines = list(
+                    current_context
+                )
+
+                if before_amount:
+                    context_lines.append(
+                        before_amount
+                    )
+
+                context_text = "\n".join(
+                    context_lines
+                ).strip()
+
+                detected_label = (
+                    self._extract_fee_label(
+                        context_text
+                    )
+                )
+
+                detected_applicability = (
+                    self._extract_applicability(
+                        context_text
+                    )
+                )
+
+                detected_scheme = (
+                    self._extract_scheme_context(
+                        context_text
+                    )
+                )
+
+                
+
+                current_row_is_applicability = (
+                    FeeRecordExtractor
+                    ._is_applicability_continuation(
+                        before_amount_cleaned
+                    )
+                    if before_amount_cleaned
+                    else False
+                )
+
+                # Determine category strictly: require an explicit label or
+                # structural continuity. Exclude pure applicability scopes
+                # and non-fee prose fragments from becoming categories.
+                is_pure_applicability = (
+                    FeeRecordExtractor._is_applicability_continuation(
+                        before_amount_cleaned
+                    )
+                    or re.match(
+                        r"^(?:for|all|except|including|excluding)\b",
+                        before_amount_cleaned,
+                        flags=re.IGNORECASE,
+                    ) is not None
+                )
+
+                is_prose_fragment = (
+                    re.match(
+                        r"^(?:outlay|about|additional|cost|expense|expenses|expenditure|payment|price|value)\b",
+                        before_amount_cleaned,
+                        flags=re.IGNORECASE,
+                    ) is not None
+                    or self._is_sentence(
+                        before_amount_cleaned
+                    )
+                )
+
+                if current_row_has_item_marker or detected_label:
+                    candidate = (
+                        detected_label
+                        or before_amount_cleaned
+                    )
+
+                    if (
+                        candidate
+                        and not is_pure_applicability
+                        and not is_prose_fragment
+                    ):
+                        current_category = candidate
+                        active_category = current_category
+                    else:
+                        current_category = (
+                            candidate
+                            if (
+                                candidate
+                                and not is_pure_applicability
+                            )
+                            else None
+                        )
+
+                else:
+                    if (
+                        before_amount_cleaned
+                        and not is_pure_applicability
+                        and not is_prose_fragment
+                    ):
+                        current_category = (
+                            before_amount_cleaned
+                        )
+                        active_category = (
+                            current_category
+                        )
+                    else:
+                        current_category = (
+                            active_category
+                            if not before_amount_cleaned
+                            else None
+                        )
+
+                if detected_scheme:
+                    active_scheme = (
+                        detected_scheme
+                    )
+
+                if detected_applicability:
+                    detected_campus = self._extract_campus(
+                        detected_applicability,
+                    )
+
+                    if detected_campus and active_campus is None:
+                        active_campus = detected_campus
+
+                
+
+                category = (
+                    current_category
+                    or active_category
+                )
+
+                if category is None:
+                    contextual_label = (
+                        self._extract_fee_label(
+                            context_text
+                        )
+                    )
+
+                    if contextual_label:
+                        category = contextual_label
+                    elif active_category:
+                        category = active_category
+                    else:
+                        continue
+
+                payment_period = (
+                    self._extract_payment_period(
+                        context_text
+                    )
+                    or self._extract_payment_period(
+                        after_amount
+                    )
+                )
+
+                scheme = (
+                    detected_scheme
+                    or active_scheme
+                )
+
+                notes = (
+                    self._extract_notes(
+                        context_text,
+                        after_amount,
+                    )
+                )
+
+                source_text_parts: list[str] = []
+
+                if context_text:
+                    source_text_parts.append(
+                        context_text
+                    )
+
+                source_text_parts.append(
+                    line
+                )
+
+                if after_amount:
+                    source_text_parts.append(
+                        after_amount
+                    )
+
+                source_text = " ".join(
+                    source_text_parts
+                )
+
+                applicability = (
+                    active_applicability
+                )
+
+                # Extract student type dynamically from the fee context.
+                # Determine student type from the CURRENT fee row first.
+                # This prevents an earlier "For locals" context from
+                # leaking into a later "For Foreigners" row.
+                student_type = None
+
+                student_type_text = (
+                    before_amount
+                    or ""
+                )
+
+                student_match = re.search(
+                    r"\bFor\s+(Locals?|Foreigners?)\b",
+                    student_type_text,
+                    flags=re.IGNORECASE,
+                )
+
+                if student_match:
+                    value = student_match.group(1).lower()
+
+                    if value.startswith("local"):
+                        student_type = "Local"
+                    else:
+                        student_type = "Foreign"
+                else:
+                    # Fall back to the surrounding context only when
+                    # the current row does not explicitly specify it.
+                    student_match = re.search(
+                        r"\bFor\s+(Locals?|Foreigners?)\b",
+                        context_text,
+                        flags=re.IGNORECASE,
+                    )
+
+                    if student_match:
+                        value = student_match.group(1).lower()
+
+                        if value.startswith("local"):
+                            student_type = "Local"
+                        else:
+                            student_type = "Foreign"
+
+                student_match = re.search(
+                    r"\bFor\s+(Locals?|Foreigners?)\b",
+                    context_text,
+                    flags=re.IGNORECASE,
+                )
+
+                if student_match:
+                    value = student_match.group(1).strip().lower()
+
+                    if value.startswith("local"):
+                        student_type = "Local"
+                    elif value.startswith("foreigner"):
+                        student_type = "Foreign"
+
+                # Extract programme scope separately from the fee label.
+                # This prevents phrases such as "All BE, BS..." from
+                # becoming the fee category itself.
+                programme_scope = None
+
+                scope_candidates = []
+
+                for context_line in context_lines:
+                    candidate_scope = str(
+                        context_line
+                    ).strip()
+
+                    candidate_scope = re.sub(
+                        r"^[•\-]+\s*",
+                        "",
+                        candidate_scope,
+                    ).strip()
+
+                    candidate_scope = re.sub(
+                        r"^(?:for)\s+",
+                        "",
+                        candidate_scope,
+                        flags=re.IGNORECASE,
+                    ).strip()
+
+                    if (
+                        re.match(
+                            r"^(?:all|be\b|bs\b|b\.\s*arch|programmes?\b)",
+                            candidate_scope,
+                            flags=re.IGNORECASE,
+                        )
+                        or re.search(
+                            r"\b(?:BE|BS|B\.\s*Arch|Programme?s?)\b",
+                            candidate_scope,
+                            flags=re.IGNORECASE,
+                        )
+                    ):
+                        scope_candidates.append(
+                            candidate_scope
+                        )
+
+                if scope_candidates:
+                    programme_scope = " ".join(
+                        scope_candidates
+                    ).strip()
+
+                    programme_scope = re.sub(
+                        r"\s+",
+                        " ",
+                        programme_scope,
+                    ).strip()
+
+                # Do not treat a student-type line as programme scope.
+                if programme_scope:
+                    programme_scope = re.sub(
+                        r"^(?:For\s+)?(?:Locals?|Foreigners?)\s*$",
+                        "",
+                        programme_scope,
+                        flags=re.IGNORECASE,
+                    ).strip()
+
+                    if not programme_scope:
+                        programme_scope = None
+
+                records.append(
+                    FeeRecord(
+                        category=category,
+                        amount=amount,
+                        currency="PKR",
+                        payment_period=payment_period,
+                        scheme=scheme,
+                        applicability=applicability,
+                        campus=active_campus,
+                        notes=notes,
+                        fee_type=self._clean_fee_type(
+                            detected_label or category
+                        ),
+                        programme_scope=programme_scope,
+                        student_type=student_type,
+                        source_page=page_number,
+                        source_heading=heading,
+                        source_text=source_text,
+                        section_number=heading_number,
+                        section_heading=section_heading,
+                    )
+                )
+
+        return records    
